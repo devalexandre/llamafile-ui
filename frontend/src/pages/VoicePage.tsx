@@ -149,8 +149,8 @@ function Transcriber() {
         </div>
 
         <div
-          style={{ ["--wails-drop-target" as string]: "drop" }}
-          className="mb-6 flex flex-col items-center rounded-2xl border border-dashed border-line bg-card px-6 py-8 text-center [&.wails-drop-target-active]:border-accent [&.wails-drop-target-active]:bg-accent-soft"
+          data-file-drop-target
+          className="mb-6 flex flex-col items-center rounded-2xl border border-dashed border-line bg-card px-6 py-8 text-center [&.file-drop-target-active]:border-accent [&.file-drop-target-active]:bg-accent-soft"
         >
           {rec.state === "recording" ? (
             <>

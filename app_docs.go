@@ -1,75 +1,13 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
-	"net/http"
 	"strings"
-
-	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/devalexandre/llamafile-ui/internal/rag"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
 )
-
-// ------------------------------------------------- rag.Embedder interface
-
-// Embed runs texts through the embeddings server, starting it if needed.
-func (a *App) Embed(ctx context.Context, modelID string, texts []string) ([][]float32, error) {
-	if a.catalog.ModelPath(modelID) == "" {
-		return nil, fmt.Errorf("o modelo de embeddings %q não está instalado", a.catalog.DisplayName(modelID))
-	}
-	if err := a.embedder.EnsureModel(ctx, modelID); err != nil {
-		return nil, err
-	}
-	body, _ := json.Marshal(map[string]any{"model": modelID, "input": texts})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.embedder.Status().BaseURL+"/v1/embeddings", bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	data, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("servidor de embeddings: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
-	}
-	var out struct {
-		Data []struct {
-			Index     int       `json:"index"`
-			Embedding []float32 `json:"embedding"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(data, &out); err != nil {
-		return nil, err
-	}
-	vecs := make([][]float32, len(texts))
-	for _, d := range out.Data {
-		if d.Index >= 0 && d.Index < len(vecs) {
-			vecs[d.Index] = d.Embedding
-		}
-	}
-	for _, v := range vecs {
-		if len(v) == 0 {
-			return nil, errors.New("o servidor não retornou todos os embeddings")
-		}
-	}
-	return vecs, nil
-}
-
-func (a *App) Prefixes(modelID string) (doc, query string) {
-	if m := a.catalog.Find(modelID); m != nil && m.Embed != nil {
-		return m.Embed.DocPrefix, m.Embed.QueryPrefix
-	}
-	return "", ""
-}
 
 // -------------------------------------------------------------- documents
 
@@ -107,12 +45,8 @@ func (a *App) ListDocuments(collectionID string) ([]rag.Document, error) {
 
 // AddDocuments opens a file dialog and indexes the chosen files.
 func (a *App) AddDocuments(collectionID string) ([]rag.Document, error) {
-	files, err := wruntime.OpenMultipleFilesDialog(a.ctx, wruntime.OpenDialogOptions{
-		Title: "Adicionar documentos",
-		Filters: []wruntime.FileFilter{
-			{DisplayName: "Documentos", Pattern: "*" + strings.Join(rag.SupportedExtensions(), ";*")},
-		},
-	})
+	files, err := a.openFiles("Adicionar documentos",
+		fileFilter{"Documentos", "*" + strings.Join(rag.SupportedExtensions(), ";*")})
 	if err != nil || len(files) == 0 {
 		return []rag.Document{}, err
 	}

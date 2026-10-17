@@ -1,6 +1,6 @@
 // Typed facade over the generated Wails bindings.
-import * as App from "../../wailsjs/go/main/App";
-import { BrowserOpenURL, EventsOn, OnFileDrop, OnFileDropOff } from "../../wailsjs/runtime/runtime";
+import { Browser } from "@wailsio/runtime";
+import * as App from "../../bindings/github.com/devalexandre/llamafile-ui/app";
 import type {
   Category,
   Collection,
@@ -35,7 +35,7 @@ export const api = {
   chooseModelsDir: () => call<string>(App.ChooseModelsDir()),
   openModelsFolder: () => App.OpenModelsFolder(),
   openDataFolder: () => App.OpenDataFolder(),
-  openURL: (url: string) => BrowserOpenURL(url),
+  openURL: (url: string) => Browser.OpenURL(url),
 
   // catalog
   categories: () => call<Category[]>(App.GetCategories()),
@@ -122,14 +122,56 @@ export const api = {
   enhancePrompt: (prompt: string) => call<string>(App.EnhanceImagePrompt(prompt)),
 };
 
-export function on<T = unknown>(event: string, fn: (data: T) => void): () => void {
-  return EventsOn(event, fn as (...data: unknown[]) => void);
+// ------------------------------------------------------------------ events
+//
+// Backend events arrive over HTTP long-polling (GET /_bus/events, served by
+// the Go side) instead of Wails' script-injection events, which proved
+// unreliable with WebKitGTK 6 once the app runs child processes.
+
+type Listener = (data: unknown) => void;
+const listeners = new Map<string, Set<Listener>>();
+
+interface BusResponse {
+  seq: number;
+  events: { seq: number; name: string; data?: unknown }[];
 }
 
-/** Files dropped on elements styled with --wails-drop-target: drop. */
+async function pollEvents() {
+  let after = -1;
+  for (;;) {
+    try {
+      const res = await fetch(`/_bus/events?after=${after}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = (await res.json()) as BusResponse;
+      for (const ev of body.events) {
+        listeners.get(ev.name)?.forEach((fn) => {
+          try {
+            fn(ev.data);
+          } catch (e) {
+            console.error(`event handler for ${ev.name} failed`, e);
+          }
+        });
+      }
+      after = body.seq;
+    } catch {
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+}
+pollEvents();
+
+export function on<T = unknown>(event: string, fn: (data: T) => void): () => void {
+  const set = listeners.get(event) ?? new Set<Listener>();
+  set.add(fn as Listener);
+  listeners.set(event, set);
+  return () => {
+    set.delete(fn as Listener);
+  };
+}
+
+/** Files dropped on elements marked with the data-file-drop-target attribute. */
 export function onFileDrop(fn: (paths: string[]) => void): () => void {
-  OnFileDrop((_x, _y, paths) => fn(paths), true);
-  return () => OnFileDropOff();
+  return on<string[]>("files:dropped", (paths) => fn(paths ?? []));
 }
 
 export const attachmentURL = (name: string) => `/attachments/${encodeURIComponent(name)}`;

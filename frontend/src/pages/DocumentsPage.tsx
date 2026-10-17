@@ -207,8 +207,8 @@ function CollectionView({ c }: { c: Collection }) {
         </div>
 
         <div
-          style={{ ["--wails-drop-target" as string]: "drop" }}
-          className="overflow-hidden rounded-[12px] border border-line bg-card [&.wails-drop-target-active]:border-accent [&.wails-drop-target-active]:bg-accent-soft"
+          data-file-drop-target
+          className="overflow-hidden rounded-[12px] border border-line bg-card [&.file-drop-target-active]:border-accent [&.file-drop-target-active]:bg-accent-soft"
         >
           {docs.length === 0 ? (
             <div className="flex flex-col items-center px-6 py-10 text-center">

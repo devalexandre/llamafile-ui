@@ -357,6 +357,12 @@ export function SettingsPage() {
             <Row label="Iniciar com o app" hint="Carrega o último modelo usado ao abrir o aplicativo.">
               <Switch checked={s.autoStart} onChange={(v) => save({ autoStart: v })} />
             </Row>
+            <Row
+              label="Manter na bandeja ao fechar"
+              hint="Fechar a janela deixa o app e o servidor rodando no ícone da bandeja (a API continua disponível). Use “Sair” no menu da bandeja para encerrar."
+            >
+              <Switch checked={s.closeToTray} onChange={(v) => save({ closeToTray: v })} />
+            </Row>
             <Row label="Restaurar padrões do servidor">
               <Button size="sm" onClick={() => api.resetServerSettings()}>
                 Restaurar

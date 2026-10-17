@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
-
 	"github.com/devalexandre/llamafile-ui/internal/catalog"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
@@ -117,10 +115,7 @@ func (a *App) StopRecording(save bool) (voice.Transcript, error) {
 }
 
 func (a *App) PickAudioFiles() ([]string, error) {
-	return wruntime.OpenMultipleFilesDialog(a.ctx, wruntime.OpenDialogOptions{
-		Title:   "Escolha arquivos de áudio",
-		Filters: []wruntime.FileFilter{{DisplayName: "Áudio (WAV, MP3, OGG, FLAC)", Pattern: "*.wav;*.mp3;*.ogg;*.flac"}},
-	})
+	return a.openFiles("Escolha arquivos de áudio", fileFilter{"Áudio (WAV, MP3, OGG, FLAC)", "*.wav;*.mp3;*.ogg;*.flac"})
 }
 
 // TranscribeFile transcribes an audio file and stores the result.

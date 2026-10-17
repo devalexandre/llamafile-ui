@@ -13,47 +13,10 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/devalexandre/llamafile-ui/internal/chat"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
-	"github.com/devalexandre/llamafile-ui/internal/settings"
 )
-
-// ------------------------------------------------- chat.Backend interface
-
-func (a *App) EnsureModel(ctx context.Context, id string) error {
-	if a.catalog.ModelPath(id) == "" {
-		return fmt.Errorf("o modelo não está instalado")
-	}
-	_ = a.updateSettings(func(s *settings.Settings) { s.LastModelID = id })
-	return a.runtime.EnsureModel(ctx, id)
-}
-func (a *App) BaseURL() string               { return a.runtime.Status().BaseURL }
-func (a *App) SupportsVision(id string) bool { return a.catalog.MMProjPath(id) != "" }
-func (a *App) ContextSize() int              { return a.settings.Get().ContextSize }
-func (a *App) Temperature() float64          { return a.settings.Get().Temperature }
-func (a *App) DefaultSystemPrompt() string   { return a.settings.Get().SystemPrompt }
-func (a *App) AutoTitle() bool               { return a.settings.Get().AutoTitle }
-func (a *App) AttachmentPath(name string) string {
-	return filepath.Join(paths.AttachmentsDir(), filepath.Base(name))
-}
-
-// Retrieve searches a document collection for the chat (RAG).
-func (a *App) Retrieve(ctx context.Context, collectionID, query string) ([]chat.Source, error) {
-	hits, err := a.docs.Search(ctx, collectionID, query, 5)
-	if err != nil {
-		return nil, err
-	}
-	sources := []chat.Source{}
-	for _, h := range hits {
-		if h.Score < 0.2 && len(sources) > 0 {
-			break // keep only reasonably related passages
-		}
-		sources = append(sources, chat.Source{N: len(sources) + 1, Document: h.Document, Chunk: h.Chunk, Text: h.Text, Score: h.Score})
-	}
-	return sources, nil
-}
 
 // ------------------------------------------------------------------ chat
 
@@ -135,7 +98,7 @@ func safeFileName(name string) string {
 
 // saveAs asks where to save and writes content there. Returns "" if cancelled.
 func (a *App) saveAs(title, defaultName string, content []byte) (string, error) {
-	path, err := wruntime.SaveFileDialog(a.ctx, wruntime.SaveDialogOptions{Title: title, DefaultFilename: safeFileName(defaultName)})
+	path, err := a.saveFile(title, safeFileName(defaultName))
 	if err != nil || path == "" {
 		return "", err
 	}
@@ -158,10 +121,7 @@ func (a *App) ExportConversation(id, format string) (string, error) {
 
 // PickImages lets the user attach images; returns attachment names.
 func (a *App) PickImages() ([]string, error) {
-	files, err := wruntime.OpenMultipleFilesDialog(a.ctx, wruntime.OpenDialogOptions{
-		Title:   "Anexar imagens",
-		Filters: []wruntime.FileFilter{{DisplayName: "Imagens", Pattern: "*.png;*.jpg;*.jpeg;*.webp;*.gif"}},
-	})
+	files, err := a.openFiles("Anexar imagens", fileFilter{"Imagens", "*.png;*.jpg;*.jpeg;*.webp;*.gif"})
 	if err != nil {
 		return nil, err
 	}

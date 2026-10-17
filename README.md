@@ -13,7 +13,7 @@
 <p align="center">
   <a href="https://github.com/devalexandre/llamafile-ui/releases/latest"><img src="https://img.shields.io/github/v/release/devalexandre/llamafile-ui?label=download&color=bd93f9" alt="Download" /></a>
   <img src="https://img.shields.io/badge/Linux%20%C2%B7%20macOS%20%C2%B7%20Windows-282a36" alt="Plataformas" />
-  <img src="https://img.shields.io/badge/Go%20%2B%20Wails%20%2B%20React-61afef" alt="Stack" />
+  <img src="https://img.shields.io/badge/Go%20%2B%20Wails%20v3%20%2B%20React-61afef" alt="Stack" />
 </p>
 
 <p align="center">
@@ -66,6 +66,9 @@ que você pode abrir para conferir.
 <p align="center"><img src="docs/screenshots/docs.png" width="760" alt="Documentos" /></p>
 
 ### ⚙️ Configurações e mais
+- **Ícone na bandeja do sistema:** fechar a janela mantém o app e o servidor rodando em segundo
+  plano (a API continua disponível). Pelo menu da bandeja você abre a janela, inicia uma nova
+  conversa, vê o modelo carregado, para o servidor ou sai. Dá para desligar em Configurações.
 - Porta e endereço do servidor, aceleração (GPU), tamanho do contexto, threads e iniciar com o app.
 - Instruções do sistema, temperatura e títulos automáticos.
 - Tema **Nocturne**, próprio do app (inspirado no Dracula e no One Dark), nos modos claro e escuro.
@@ -76,23 +79,109 @@ que você pode abrir para conferir.
 
 ## Instalação
 
-Baixe a versão mais recente na página de [Releases](https://github.com/devalexandre/llamafile-ui/releases/latest):
+Baixe o arquivo do seu sistema na página de [Releases](https://github.com/devalexandre/llamafile-ui/releases/latest)
+e siga os passos abaixo.
 
-| Sistema | Arquivo | Como abrir |
-|---|---|---|
-| **Windows** (x64) | `llamafile-ui-<versão>-windows-amd64-setup.exe` (instalador) ou `…-windows-amd64.exe` (portátil) | Se o SmartScreen avisar, clique em **Mais informações → Executar assim mesmo**. |
-| **macOS** (Intel e Apple Silicon) | `llamafile-ui-<versão>-macos-universal.zip` | Descompacte e mova para Aplicativos. Na primeira vez, clique com o **botão direito → Abrir**. |
-| **Linux** (x64) | `llamafile-ui-<versão>-linux-amd64.tar.gz` | `tar xzf llamafile-ui-*.tar.gz && ./llamafile-ui` |
+| Sistema | Arquivo |
+|---|---|
+| **Windows 10/11** (x64) | `llamafile-ui-<versão>-windows-amd64-setup.exe` (instalador, recomendado) ou `llamafile-ui-<versão>-windows-amd64.exe` (portátil) |
+| **macOS 12+** (Intel e Apple Silicon) | `llamafile-ui-<versão>-macos-universal.zip` |
+| **Ubuntu 24.04+, Debian 13+, Mint 22+** | `llamafile-ui_<versão>_amd64.deb` |
+| **Fedora 40+, openSUSE** | `llamafile-ui-<versão>-1.x86_64.rpm` |
+| **Arch, Manjaro, EndeavourOS** | `llamafile-ui-<versão>-1-x86_64.pkg.tar.zst` |
+| **Outras distribuições** | `llamafile-ui-<versão>-x86_64.AppImage` (quando disponível) ou `llamafile-ui-<versão>-linux-amd64.tar.gz` |
 
-No Linux é preciso ter **WebKitGTK 4.1** e **GTK 3**, que já vêm na maioria das distribuições:
+> Os binários ainda não são assinados digitalmente. Por isso o Windows e o macOS mostram um aviso
+> na primeira vez; os passos abaixo explicam como liberar. Você pode conferir a integridade do
+> download com o `SHA256SUMS.txt` da release.
+
+### Windows
+
+**Com o instalador (recomendado)**
+
+1. Dê dois cliques em `llamafile-ui-<versão>-windows-amd64-setup.exe`.
+2. Se aparecer **"O Windows protegeu o computador"** (SmartScreen), clique em **Mais informações → Executar assim mesmo**.
+3. Aceite o pedido de permissão de administrador e conclua o assistente.
+   - O app é instalado em `C:\Program Files\devalexandre\Llamafile UI`.
+   - Se faltar o **Microsoft Edge WebView2** (já vem no Windows 11), o instalador o baixa automaticamente.
+   - São criados atalhos no **Menu Iniciar** e na **Área de Trabalho**.
+4. Abra **Llamafile UI** pelo Menu Iniciar.
+
+Para desinstalar: **Configurações → Aplicativos → Aplicativos instalados → Llamafile UI → Desinstalar**.
+Seus modelos e conversas ficam em `%LOCALAPPDATA%\LlamafileUI`; apague essa pasta se quiser remover tudo.
+
+**Versão portátil (sem instalar)**
+
+1. Coloque `llamafile-ui-<versão>-windows-amd64.exe` em uma pasta de sua preferência (por exemplo, `Documentos\Llamafile`).
+2. Dê dois cliques nele. No aviso do SmartScreen, use **Mais informações → Executar assim mesmo**.
+3. A versão portátil precisa do WebView2. Se o app não abrir no Windows 10, instale o
+   [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (opção *Evergreen Bootstrapper*).
+
+Na primeira vez em que o app iniciar o llamafile, o **Firewall do Windows** pode perguntar sobre
+acesso à rede. Você pode recusar: o servidor só escuta em `127.0.0.1`, a menos que você mude o
+endereço nas Configurações.
+
+### macOS
+
+1. Dê dois cliques em `llamafile-ui-<versão>-macos-universal.zip` para descompactar. Vai aparecer o **Llamafile UI.app**.
+2. Arraste o **Llamafile UI.app** para a pasta **Aplicativos**.
+3. Abra o app pela pasta Aplicativos. Como ele não é notarizado pela Apple, o macOS vai bloquear a primeira abertura:
+   - **macOS 15 (Sequoia) ou mais novo:** feche o aviso, abra **Ajustes do Sistema → Privacidade e Segurança**,
+     role até a mensagem sobre o *Llamafile* e clique em **Abrir Mesmo Assim**. Confirme com sua senha.
+   - **macOS 14 ou anterior:** clique com o **botão direito** (ou Control + clique) no app → **Abrir** → **Abrir**.
+4. Nas próximas vezes ele abre normalmente, inclusive pelo Launchpad e pelo Spotlight.
+
+Se preferir o Terminal, este comando remove a quarentena de uma vez:
 
 ```bash
-sudo apt install libwebkit2gtk-4.1-0 libgtk-3-0     # Debian/Ubuntu
-sudo pacman -S webkit2gtk-4.1 gtk3                  # Arch
-sudo dnf install webkit2gtk4.1 gtk3                 # Fedora
+xattr -dr com.apple.quarantine "/Applications/Llamafile UI.app"
 ```
 
-Os binários não são assinados; por isso os avisos do macOS e do Windows na primeira execução.
+Ao usar o ditado ou a gravação pela primeira vez, o macOS pede permissão para o **microfone**;
+clique em **Permitir**. Para desinstalar, mova o app para o Lixo e, se quiser apagar modelos e
+conversas, remova `~/Library/Application Support/LlamafileUI`.
+
+### Linux
+
+O app usa **GTK 4** e **WebKitGTK 6**. Os pacotes `.deb`, `.rpm` e do Arch instalam essas
+dependências automaticamente, além do atalho no menu de aplicativos e do ícone.
+
+**Ubuntu, Debian, Mint (`.deb`)**
+
+```bash
+sudo apt install ./llamafile-ui_*_amd64.deb
+```
+
+**Fedora, openSUSE (`.rpm`)**
+
+```bash
+sudo dnf install ./llamafile-ui-*.x86_64.rpm        # Fedora
+sudo zypper install ./llamafile-ui-*.x86_64.rpm     # openSUSE
+```
+
+**Arch, Manjaro, EndeavourOS**
+
+```bash
+sudo pacman -U llamafile-ui-*-x86_64.pkg.tar.zst
+```
+
+Depois abra **Llamafile UI** pelo menu de aplicativos (ou rode `llamafile-ui` no terminal).
+Para desinstalar: `sudo apt remove llamafile-ui`, `sudo dnf remove llamafile-ui` ou
+`sudo pacman -R llamafile-ui`. Modelos e conversas ficam em `~/.local/share/LlamafileUI`.
+
+**Outras distribuições**
+
+- **AppImage** (quando presente na release): `chmod +x llamafile-ui-*.AppImage && ./llamafile-ui-*.AppImage`.
+- **`.tar.gz`**: instale `gtk4` e `webkitgtk-6.0` pelo gerenciador de pacotes da sua distribuição e rode:
+
+  ```bash
+  tar xzf llamafile-ui-*-linux-amd64.tar.gz
+  ./llamafile-ui
+  ```
+
+O microfone é acessado pelo PulseAudio/PipeWire do sistema, sem configuração extra. No **GNOME**,
+o ícone da bandeja só aparece com a extensão
+[AppIndicator](https://extensions.gnome.org/extension/615/appindicator-support/) (já vem no Ubuntu).
 
 ## Primeiros passos
 
@@ -162,21 +251,36 @@ imagens geradas e os executáveis. Configurações → *Dados do aplicativo* abr
 | **Janela em branco no Linux com NVIDIA** | O app já define `WEBKIT_DISABLE_DMABUF_RENDERER=1`. Se persistir, rode `WEBKIT_DISABLE_COMPOSITING_MODE=1 ./llamafile-ui`. |
 | **llamafile não inicia no Linux** | O app executa o llamafile via `sh`, para não esbarrar no `binfmt_misc` (ex.: Wine). Veja o log em Configurações → Diagnóstico. |
 | **Microfone não funciona** | Confira a permissão de microfone do sistema (macOS: Ajustes → Privacidade → Microfone). |
+| **Fechei a janela e o app continua rodando** | É o modo bandeja: use **Sair** no menu do ícone da bandeja, ou desligue *Manter na bandeja ao fechar* em Configurações. |
+| **O ícone da bandeja não aparece (GNOME)** | Instale a extensão [AppIndicator](https://extensions.gnome.org/extension/615/appindicator-support/). Abrir o app de novo pelo menu traz a janela de volta. |
 
 ## Desenvolvimento
 
-Requisitos: Go 1.25+, Node 20+, [Wails CLI v2](https://wails.io/docs/gettingstarted/installation)
-e, no Linux, `webkit2gtk-4.1` e `gtk3` (pacotes de desenvolvimento). A gravação de áudio usa
+Requisitos: Go 1.25+, Node 20+, [Wails CLI v3](https://v3.wails.io/getting-started/installation/)
+e, no Linux, os pacotes de desenvolvimento de **GTK 4** e **WebKitGTK 6** (`libgtk-4-dev` e
+`libwebkitgtk-6.0-dev` no Ubuntu/Debian; `gtk4` e `webkitgtk-6.0` no Arch). A gravação de áudio usa
 [miniaudio](https://github.com/gen2brain/malgo) via cgo, então é preciso um compilador C (gcc ou clang).
 
 ```bash
-go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.30
 
-wails dev -tags webkit2_41      # Linux (WebKitGTK 4.1)
-wails dev                       # macOS / Windows
+wails3 dev                        # modo desenvolvimento com hot reload
+wails3 build                      # binário de produção em bin/llamafile-ui
+wails3 package                    # pacotes do sistema atual (instalador, .app, .deb/.rpm/AppImage)
 
-wails build -tags webkit2_41    # gera build/bin/llamafile-ui
+wails3 task linux:create:deb      # só o .deb (também: create:rpm, create:aur, create:appimage)
 ```
+
+> O projeto usa o **Wails v3** (beta). As configurações de build e empacotamento ficam em
+> `build/config.yml` e nos `Taskfile.yml`. Depois de mudar `info` no `config.yml`, rode
+> `wails3 task common:update:build-assets` e re-adicione `NSMicrophoneUsageDescription` aos
+> `build/darwin/Info*.plist` (o comando sobrescreve esses arquivos).
+
+**Eventos do backend.** Os eventos do Go para o React (streaming do chat, progresso de downloads,
+imagens, transcrições) trafegam por *long-polling* HTTP (`GET /_bus/events`, em
+`internal/eventbus`), e não pelos eventos por injeção de script do Wails. Com WebKitGTK 6, os
+scripts injetados deixavam de executar assim que o app iniciava um processo filho (o servidor
+llamafile), enquanto as requisições HTTP continuavam funcionando.
 
 ### Testes
 
@@ -203,8 +307,10 @@ VAE do FLUX) são baixados uma única vez.
 ### Estrutura
 
 ```
-main.go, app*.go           Wails: janela e métodos expostos ao frontend (um arquivo por área)
+main.go                    janela, bandeja do sistema, instância única e servidor de assets
+app*.go                    serviço Wails: métodos expostos ao frontend (um arquivo por área)
 internal/
+  eventbus/                eventos Go → frontend por long-polling HTTP
   catalog/                 catálogo embutido + fit engine (recomendação)
   hardware/                detecção de CPU/RAM/GPU por sistema operacional
   tools/                   llamafile, whisperfile e diffusionfile: release, download, execução via sh
@@ -218,14 +324,17 @@ internal/
 frontend/src/
   pages/                   Chat, Imagens, Transcrição, Documentos, Descobrir, Meus modelos, Configurações
   components/              Sidebar, cartões de modelo, controles no estilo macOS
+build/                     config.yml, Taskfiles, ícones, Info.plist, NSIS e nfpm (pacotes Linux)
 tools/catalog/             gerador do catálogo
 ```
 
 ### Releases
 
-A cada push ou merge em `main`/`master`, o workflow [`release.yml`](.github/workflows/release.yml)
-roda os testes, compila para Linux (amd64), Windows (amd64, `.exe` + instalador NSIS) e macOS
-(universal) e publica uma release `v0.1.<número da execução>` com os arquivos e checksums SHA-256.
+A cada push ou merge em `main`/`master` (exceto mudanças só em documentação), o workflow
+[`release.yml`](.github/workflows/release.yml) roda os testes, gera o instalador NSIS e o `.exe`
+portátil do Windows, o `.app` universal do macOS, os pacotes `.deb`, `.rpm` e do Arch, o
+`.tar.gz` (e, quando possível, o AppImage) do Linux, e publica uma release `v0.2.<número da execução>`
+com checksums SHA-256.
 
 ## Próximos passos
 

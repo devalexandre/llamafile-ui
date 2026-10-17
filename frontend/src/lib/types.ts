@@ -38,6 +38,7 @@ export interface Settings {
   embedModelId: string;
   imageModelId: string;
   fastDecode: boolean;
+  closeToTray: boolean;
 }
 
 export type FitLevel = "perfect" | "good" | "marginal" | "tight";
