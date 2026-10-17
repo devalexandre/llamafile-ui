@@ -2,6 +2,7 @@ import clsx from "clsx";
 import {
   ArrowUp,
   BookOpen,
+  Bot,
   Brain,
   Check,
   ChevronDown,
@@ -107,6 +108,40 @@ function ModelPicker({ models, value, onChange }: { models: ModelView[]; value: 
         icon: m.id === value ? <Check className="size-3.5" /> : undefined,
         onClick: () => onChange(m.id),
       }))}
+    />
+  );
+}
+
+function AgentPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const app = useApp();
+  const current = app.agents.find((a) => a.id === value);
+  return (
+    <Menu
+      align="left"
+      trigger={(toggle) => (
+        <button
+          onClick={toggle}
+          title="Agente que responde nesta conversa"
+          className={clsx(
+            "no-drag flex h-[26px] items-center gap-1.5 rounded-full px-2.5 text-[12.5px]",
+            current ? "bg-accent-soft font-medium text-accent" : "text-muted hover:bg-hover hover:text-fg",
+          )}
+        >
+          {current ? <span>{current.icon}</span> : <Bot className="size-3.5" />}
+          {current ? current.name : "Agente"}
+          <ChevronDown className="size-3" />
+        </button>
+      )}
+      items={[
+        { label: "Assistente padrão", icon: !value ? <Check className="size-3.5" /> : undefined, onClick: () => onChange("") },
+        ...app.agents.map((a) => ({
+          label: `${a.icon} ${a.name}`,
+          icon: a.id === value ? <Check className="size-3.5" /> : undefined,
+          onClick: () => onChange(a.id),
+        })),
+        "separator" as const,
+        { label: "Gerenciar agentes…", icon: <Settings2 className="size-3.5" />, onClick: () => app.setPage("agents") },
+      ]}
     />
   );
 }
@@ -658,6 +693,9 @@ export function ChatPage() {
   const [status, setStatus] = useState(""); // loading | searching | generating | ""
   const [streamingId, setStreamingId] = useState<number | null>(null);
   const [collectionId, setCollectionId] = useState("");
+  // Agent answering and project of the conversation (or of the new chat).
+  const [agentId, setAgentId] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [draft, setDraft] = useState<ChatDraft | null>(null);
   const [imageStep, setImageStep] = useState("");
   const [speakingId, setSpeakingId] = useState("");
@@ -694,7 +732,11 @@ export function ChatPage() {
       setStreamingId(null);
       const d = app.takeChatDraft();
       setDraft(d);
-      setCollectionId(d?.collectionId ?? "");
+      const proj = app.projects.find((p) => p.id === d?.projectId);
+      const ag = app.agents.find((a) => a.id === (d?.agentId || proj?.agentId));
+      setProjectId(d?.projectId ?? "");
+      setAgentId(ag?.id ?? "");
+      setCollectionId(d?.collectionId || proj?.collectionId || ag?.collectionId || "");
       return;
     }
     api
@@ -703,6 +745,8 @@ export function ChatPage() {
         setMessages(d.messages);
         setTitle(d.conversation.title);
         setCollectionId(d.conversation.collectionId ?? "");
+        setAgentId(d.conversation.agentId ?? "");
+        setProjectId(d.conversation.projectId ?? "");
         if (d.conversation.modelId && app.chatModels.some((m) => m.id === d.conversation.modelId)) {
           setModelId(d.conversation.modelId);
         }
@@ -790,7 +834,7 @@ export function ChatPage() {
       stick.current = true;
       try {
         if (!convId) setStatus("loading");
-        const conv = await api.send(convId, modelId, collectionId, text, attachments);
+        const conv = await api.sendWith({ conversationId: convId, modelId, collectionId, agentId, projectId, text, attachments });
         if (!convId) {
           convRef.current = conv.id;
           app.openConversation(conv.id);
@@ -800,7 +844,7 @@ export function ChatPage() {
         app.toast(errorText(e), "error");
       }
     },
-    [convId, modelId, collectionId, app],
+    [convId, modelId, collectionId, agentId, projectId, app],
   );
 
   const generateImage = useCallback(
@@ -833,6 +877,16 @@ export function ChatPage() {
     if (convId) api.setConversationCollection(convId, id);
   };
   const collection = app.collections.find((c) => c.id === collectionId);
+  const agent = app.agents.find((a) => a.id === agentId);
+  const project = app.projects.find((p) => p.id === projectId);
+
+  const changeAgent = (id: string) => {
+    setAgentId(id);
+    if (convId) api.setConversationAgent(convId, id).catch((e) => app.toast(errorText(e), "error"));
+    const a = app.agents.find((x) => x.id === id);
+    if (a?.modelId && a.modelId !== modelId && app.chatModels.some((m) => m.id === a.modelId)) changeModel(a.modelId);
+    if (a?.collectionId && !collectionId) changeCollection(a.collectionId);
+  };
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const empty = messages.length === 0;
@@ -841,7 +895,19 @@ export function ChatPage() {
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col bg-bg">
       <header className="drag flex h-[52px] shrink-0 items-center gap-2 border-b border-line px-4">
+        {project && (
+          <button
+            onClick={() => app.openProject(project.id)}
+            className="no-drag flex h-[26px] shrink-0 items-center gap-1 rounded-[7px] px-2 text-[12.5px] text-muted hover:bg-hover hover:text-fg"
+            title="Abrir o projeto"
+          >
+            <span>{project.icon}</span>
+            <span className="max-w-[140px] truncate">{project.name}</span>
+            <span className="text-faint">/</span>
+          </button>
+        )}
         {app.chatModels.length > 0 && <ModelPicker models={app.chatModels} value={modelId} onChange={changeModel} />}
+        <AgentPicker value={agentId} onChange={changeAgent} />
         {title && <span className="truncate text-[13px] text-muted">· {title}</span>}
         <div className="flex-1" />
         {status === "loading" && (
@@ -883,9 +949,12 @@ export function ChatPage() {
             />
           ) : (
             <div className="mx-auto flex h-full max-w-[680px] flex-col items-center justify-center px-6 pb-10">
-              <div className="mb-1 text-[26px] font-semibold tracking-tight">Como posso ajudar?</div>
-              <div className="mb-7 text-[13px] text-muted">
-                {model ? `Conversando com ${model.name}` : "Escolha um modelo"} — tudo fica no seu computador.
+              {agent && <div className="mb-2 text-[40px] leading-none">{agent.icon}</div>}
+              <div className="mb-1 text-[26px] font-semibold tracking-tight">{agent ? agent.name : "Como posso ajudar?"}</div>
+              <div className="mb-7 max-w-[520px] text-center text-[13px] text-muted">
+                {agent?.description ? `${agent.description} · ` : ""}
+                {model ? `Usando ${model.name}` : "Escolha um modelo"}
+                {project ? ` no projeto ${project.name}` : ""} — tudo fica no seu computador.
               </div>
               <div className="grid w-full grid-cols-2 gap-2">
                 {suggestions.map((s) => (

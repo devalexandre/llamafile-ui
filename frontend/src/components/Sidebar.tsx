@@ -1,6 +1,8 @@
 import clsx from "clsx";
 import {
   AudioLines,
+  Bot,
+  FolderKanban,
   BookOpen,
   Compass,
   ImagePlus,
@@ -81,6 +83,11 @@ function ConversationItem({ c, onRename }: { c: Conversation; onRename: (c: Conv
               icon: c.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />,
               onClick: () => api.pin(c.id, !c.pinned),
             },
+            ...app.projects.map((p) => ({
+              label: `Mover para ${p.icon} ${p.name}`,
+              icon: <FolderKanban className="size-3.5" />,
+              onClick: () => api.moveConversation(c.id, p.id).catch((e) => app.toast(errorText(e), "error")),
+            })),
             "separator",
             { label: "Exportar como Markdown", icon: <FileText className="size-3.5" />, onClick: () => exportAs("md") },
             { label: "Exportar como JSON", icon: <FileJson className="size-3.5" />, onClick: () => exportAs("json") },
@@ -121,6 +128,18 @@ export function Sidebar() {
 
       <nav className="space-y-0.5 px-2.5">
         <NavItem page="chat" icon={<MessageSquare className="size-4" />} label="Chat" />
+        <NavItem
+          page="projects"
+          icon={<FolderKanban className="size-4" />}
+          label="Projetos"
+          badge={<span className="text-[11px] text-muted">{app.projects.length || ""}</span>}
+        />
+        <NavItem
+          page="agents"
+          icon={<Bot className="size-4" />}
+          label="Agentes"
+          badge={<span className="text-[11px] text-muted">{app.agents.length || ""}</span>}
+        />
         <NavItem page="images" icon={<ImagePlus className="size-4" />} label="Imagens" />
         <NavItem page="voice" icon={<AudioLines className="size-4" />} label="Transcrição" />
         <NavItem

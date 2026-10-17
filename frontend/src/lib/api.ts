@@ -2,6 +2,8 @@
 import { Browser } from "@wailsio/runtime";
 import * as App from "../../bindings/github.com/devalexandre/llamafile-ui/app";
 import type {
+  Agent,
+  Project,
   BenchRecord,
   BenchResult,
   Category,
@@ -49,6 +51,26 @@ export const api = {
   downloadModel: (id: string, quant = "") => App.DownloadModel(id, quant),
   cancelDownload: (key: string) => App.CancelDownload(key),
   removeModel: (id: string) => App.RemoveModel(id),
+
+  // agents & projects
+  agents: () => call<Agent[]>(App.ListAgents()),
+  saveAgent: (a: Partial<Agent>) => call<Agent>(App.SaveAgent(a as never)),
+  deleteAgent: (id: string) => App.DeleteAgent(id),
+  projects: () => call<Project[]>(App.ListProjects()),
+  saveProject: (p: Partial<Project>) => call<Project>(App.SaveProject(p as never)),
+  deleteProject: (id: string, withConversations: boolean) => App.DeleteProject(id, withConversations),
+  projectConversations: (id: string) => call<Conversation[]>(App.ListProjectConversations(id)),
+  setConversationAgent: (id: string, agentId: string) => App.SetConversationAgent(id, agentId),
+  moveConversation: (id: string, projectId: string) => App.MoveConversation(id, projectId),
+  sendWith: (req: {
+    conversationId: string;
+    modelId: string;
+    collectionId: string;
+    agentId: string;
+    projectId: string;
+    text: string;
+    attachments: string[];
+  }) => call<Conversation>(App.SendMessageWith(req as never)),
   speak: (id: string, text: string) => App.Speak(id, text),
   stopSpeaking: () => App.StopSpeaking(),
   speakingId: () => call<string>(App.SpeakingID()),

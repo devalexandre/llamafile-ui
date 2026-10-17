@@ -4,7 +4,9 @@ import { useEffect } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { Button } from "./components/ui";
 import { useApp } from "./lib/store";
+import { AgentsPage } from "./pages/AgentsPage";
 import { ChatPage } from "./pages/ChatPage";
+import { ProjectsPage } from "./pages/ProjectsPage";
 import { DiscoverPage } from "./pages/DiscoverPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { ImagesPage } from "./pages/ImagesPage";
@@ -73,6 +75,8 @@ export default function App() {
         <MissingRuntimeBanner />
         <div className={clsx("flex min-h-0 flex-1")}>
           {app.page === "chat" && <ChatPage />}
+          {app.page === "projects" && <ProjectsPage />}
+          {app.page === "agents" && <AgentsPage />}
           {app.page === "images" && <ImagesPage />}
           {app.page === "voice" && <VoicePage />}
           {app.page === "documents" && <DocumentsPage />}

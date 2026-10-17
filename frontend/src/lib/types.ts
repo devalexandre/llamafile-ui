@@ -1,4 +1,4 @@
-export type Page = "chat" | "images" | "voice" | "documents" | "discover" | "library" | "settings";
+export type Page = "chat" | "projects" | "agents" | "images" | "voice" | "documents" | "discover" | "library" | "settings";
 
 export interface Hardware {
   os: string;
@@ -155,10 +155,40 @@ export interface Conversation {
   systemPrompt: string;
   pinned: boolean;
   collectionId: string;
+  agentId: string;
+  projectId: string;
   createdAt: number;
   updatedAt: number;
   preview: string;
   messageCount: number;
+}
+
+export interface Agent {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  systemPrompt: string;
+  /** "" = the model chosen in the chat. */
+  modelId: string;
+  /** < 0 = app default. */
+  temperature: number;
+  collectionId: string;
+  createdAt: number;
+  updatedAt: number;
+  uses: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  agentId: string;
+  collectionId: string;
+  createdAt: number;
+  updatedAt: number;
+  conversations: number;
 }
 
 export interface Message {
@@ -346,4 +376,8 @@ export interface ChatDraft {
   text?: string;
   attachments?: string[];
   collectionId?: string;
+  /** New conversation answered by this agent. */
+  agentId?: string;
+  /** New conversation inside this project. */
+  projectId?: string;
 }
