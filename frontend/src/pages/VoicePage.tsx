@@ -237,7 +237,7 @@ export function VoicePage() {
       <header className="drag flex h-[52px] shrink-0 items-center border-b border-line px-6">
         <h1 className="text-[14px] font-semibold">Transcrição</h1>
       </header>
-      <ToolGate tool="whisperfile" icon={<AudioLines className="size-6" />}>
+      <ToolGate tool="whisperfile" alternative={{ tool: "whisper-gpu", label: "Baixar versão com GPU" }} icon={<AudioLines className="size-6" />}>
         <ModelGate category="voice" models={app.voiceModels} icon={<AudioLines className="size-6" />}>
           <Transcriber />
         </ModelGate>

@@ -194,8 +194,10 @@ func (a *App) hardware() hardware.Info {
 // no GPU support, so recommendations must assume CPU.
 func (a *App) fitHardware() hardware.Info {
 	hw := a.hardware()
-	if c, ok := a.toolGPU(tools.Whisper); ok {
-		hw.WhisperGPU = c.GPU
+	if _, engine := a.voiceBinary(); engine != "" {
+		if c, ok := a.toolGPU(engine); ok {
+			hw.WhisperGPU = c.GPU
+		}
 	}
 	if _, engine := a.imageBinary(); engine != "" {
 		if c, ok := a.toolGPU(engine); ok {
@@ -458,6 +460,9 @@ func (a *App) GetLogs() []string    { return a.runtime.Logs() }
 func (a *App) toolInstalled(key, dest string) error {
 	if key == tools.DownloadKey(piperTool) {
 		return tts.Install(dest)
+	}
+	if key == tools.DownloadKey(tools.WhisperGPU) {
+		return tools.InstallWhisperGPU(dest)
 	}
 	if key == tools.DownloadKey(tools.SDCpp) {
 		return tools.InstallSDCpp(dest, sdcppVersion(dest))

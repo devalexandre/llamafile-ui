@@ -100,17 +100,23 @@ func SDCppBinary() (path, version string) {
 
 // InstallSDCpp extracts a downloaded package into SDCppDir and removes it.
 func InstallSDCpp(file, version string) error {
+	return installNative(file, SDCppDir(), "sd-cli", version, "stable-diffusion.cpp")
+}
+
+// installNative extracts a package holding a native executable (plus its
+// libraries) into dir, records its version and removes the package.
+func installNative(file, dir, binName, version, label string) error {
 	defer os.Remove(file)
-	tmp := SDCppDir() + ".new"
+	tmp := dir + ".new"
 	_ = os.RemoveAll(tmp)
 	if err := archive.Extract(file, tmp); err != nil {
 		_ = os.RemoveAll(tmp)
-		return fmt.Errorf("não foi possível extrair o stable-diffusion.cpp: %w", err)
+		return fmt.Errorf("não foi possível extrair o %s: %w", label, err)
 	}
 	// The binary may sit in a subfolder depending on the package.
 	root := ""
 	_ = filepath.WalkDir(tmp, func(p string, d fs.DirEntry, err error) error {
-		if err == nil && !d.IsDir() && strings.TrimSuffix(d.Name(), ".exe") == "sd-cli" {
+		if err == nil && !d.IsDir() && strings.TrimSuffix(d.Name(), ".exe") == binName {
 			root = filepath.Dir(p)
 			return fs.SkipAll
 		}
@@ -118,16 +124,19 @@ func InstallSDCpp(file, version string) error {
 	})
 	if root == "" {
 		_ = os.RemoveAll(tmp)
-		return errors.New("o pacote do stable-diffusion.cpp não contém o sd-cli")
+		return fmt.Errorf("o pacote do %s não contém o %s", label, binName)
 	}
 	_ = os.WriteFile(filepath.Join(root, "VERSION"), []byte(version), 0o644)
-	_ = os.RemoveAll(SDCppDir())
-	if err := os.Rename(root, SDCppDir()); err != nil {
+	_ = os.RemoveAll(dir)
+	if err := os.Rename(root, dir); err != nil {
 		return err
 	}
 	_ = os.RemoveAll(tmp)
-	bin, _ := SDCppBinary()
-	return os.Chmod(bin, 0o755)
+	name := binName
+	if goruntime.GOOS == "windows" {
+		name += ".exe"
+	}
+	return os.Chmod(filepath.Join(dir, name), 0o755)
 }
 
 // RemoveSDCpp deletes the installed build.

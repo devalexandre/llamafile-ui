@@ -12,7 +12,6 @@ import (
 	"github.com/devalexandre/llamafile-ui/internal/catalog"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
-	"github.com/devalexandre/llamafile-ui/internal/tools"
 	"github.com/devalexandre/llamafile-ui/internal/voice"
 )
 
@@ -34,7 +33,7 @@ func (a *App) SetVoiceLanguage(lang string) error {
 }
 
 func (a *App) StartRecording() error {
-	if a.toolPath(tools.Whisper) == "" {
+	if bin, _ := a.voiceBinary(); bin == "" {
 		return errors.New("instale o whisperfile para usar voz")
 	}
 	if _, err := a.voiceModel(); err != nil {
@@ -60,7 +59,7 @@ func (a *App) transcribe(audio string) (voice.Result, catalog.View, time.Duratio
 	if err != nil {
 		return voice.Result{}, m, 0, err
 	}
-	bin := a.toolPath(tools.Whisper)
+	bin, _ := a.voiceBinary()
 	if bin == "" {
 		return voice.Result{}, m, 0, errors.New("instale o whisperfile para usar voz")
 	}
@@ -83,7 +82,7 @@ func (a *App) transcribe(audio string) (voice.Result, catalog.View, time.Duratio
 	started := time.Now()
 	a.emit("voice:progress", 0)
 	res, err := voice.Transcribe(ctx, audio, voice.Options{
-		Binary: bin, Model: a.catalog.ModelPath(m.ID), Language: a.settings.Get().VoiceLanguage,
+		Binary: bin, Model: a.catalog.ModelPath(m.ID), Language: a.settings.Get().VoiceLanguage, Accurate: a.settings.Get().VoiceAccurate,
 		OnProgress: func(p int) { a.emit("voice:progress", p) },
 	})
 	if errors.Is(err, context.Canceled) {
@@ -119,7 +118,14 @@ func (a *App) StopRecording(save bool) (voice.Transcript, error) {
 }
 
 func (a *App) PickAudioFiles() ([]string, error) {
-	return a.openFiles("Escolha arquivos de áudio", fileFilter{"Áudio (WAV, MP3, OGG, FLAC)", "*.wav;*.mp3;*.ogg;*.flac"})
+	if voice.FFmpeg() == "" {
+		return a.openFiles("Escolha arquivos de áudio", fileFilter{"Áudio (WAV, MP3, OGG, FLAC)", "*.wav;*.mp3;*.ogg;*.flac"})
+	}
+	patterns := []string{"*.wav", "*.mp3", "*.ogg", "*.flac"}
+	for _, e := range voice.VideoExtensions {
+		patterns = append(patterns, "*"+e)
+	}
+	return a.openFiles("Escolha arquivos de áudio ou vídeo", fileFilter{"Áudio e vídeo", strings.Join(patterns, ";")})
 }
 
 // TranscribeFile transcribes an audio file and stores the result.

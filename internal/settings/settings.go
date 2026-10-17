@@ -26,6 +26,8 @@ type Settings struct {
 
 	VoiceModelID  string `json:"voiceModelId"`
 	VoiceLanguage string `json:"voiceLanguage"` // auto, pt, en…
+	VoiceEngine   string `json:"voiceEngine"`   // auto, whisperfile, whisper-gpu (whisper.cpp with GPU)
+	VoiceAccurate bool   `json:"voiceAccurate"` // beam search: slower, slightly more accurate
 	EmbedModelID  string `json:"embedModelId"`
 	ImageModelID  string `json:"imageModelId"`
 	VideoModelID  string `json:"videoModelId"`
@@ -99,6 +101,9 @@ func sanitize(s Settings) Settings {
 	}
 	if s.VoiceLanguage == "" {
 		s.VoiceLanguage = d.VoiceLanguage
+	}
+	if s.VoiceEngine != "whisperfile" && s.VoiceEngine != "whisper-gpu" {
+		s.VoiceEngine = "auto"
 	}
 	if s.ImageEngine != "diffusionfile" && s.ImageEngine != "sd-cpp" {
 		s.ImageEngine = "auto"

@@ -17,6 +17,10 @@ const toolInfo: Record<ToolStatus["tool"], { title: string; text: string }> = {
     title: "Instale o diffusionfile",
     text: "Motor de geração de imagens do projeto llamafile (stable-diffusion.cpp). É um único executável.",
   },
+  "whisper-gpu": {
+    title: "Instale o whisper.cpp com GPU",
+    text: "Versão do motor de transcrição que usa a placa de vídeo (Vulkan, ou Metal no Mac): dezenas de vezes mais rápida.",
+  },
   "sd-cpp": {
     title: "Instale o stable-diffusion.cpp",
     text: "Versão do motor de imagens com GPU (Vulkan, ou Metal no Mac): gera imagens bem mais rápido.",

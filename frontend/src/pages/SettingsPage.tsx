@@ -231,6 +231,10 @@ function BenchSection() {
 
 const toolLabels: Record<string, { name: string; hint: string }> = {
   whisperfile: { name: "whisperfile", hint: "Transcrição de voz e ditado (whisper.cpp)." },
+  "whisper-gpu": {
+    name: "whisper.cpp",
+    hint: "Transcrição com GPU (Vulkan, ou Metal no Mac), compilada pelo projeto. Mesmos modelos, dezenas de vezes mais rápida.",
+  },
   diffusionfile: { name: "diffusionfile", hint: "Geração de imagens (stable-diffusion.cpp)." },
   "sd-cpp": {
     name: "stable-diffusion.cpp",
@@ -301,6 +305,49 @@ function SpeechSection() {
   );
 }
 
+/** Which program transcribes audio, and greedy vs. beam search decoding. */
+function VoiceEngineRow() {
+  const app = useApp();
+  const s = app.settings!;
+  const wf = app.tool("whisperfile");
+  const gpu = app.tool("whisper-gpu");
+  const [active, setActive] = useState("");
+  useEffect(() => {
+    api
+      .activeVoiceEngine()
+      .then(setActive)
+      .catch(() => {});
+  }, [s.voiceEngine, wf?.installed, gpu?.installed]);
+  if (!wf?.installed && !gpu?.installed) return null;
+  const names: Record<string, string> = { whisperfile: "whisperfile", "whisper-gpu": "whisper.cpp (GPU)" };
+  return (
+    <>
+      <Row
+        label="Motor de transcrição"
+        hint={
+          <>
+            Em uso: <span className="font-medium text-fg">{names[active] ?? "nenhum"}</span>
+            {s.voiceEngine === "auto" && " · Automático usa a versão com GPU quando estiver instalada."}
+          </>
+        }
+      >
+        <Select
+          value={s.voiceEngine}
+          onChange={(v) => app.saveSettings({ voiceEngine: v as Settings["voiceEngine"] })}
+          options={[
+            { value: "auto", label: "Automático" },
+            { value: "whisperfile", label: "whisperfile (CPU)" },
+            { value: "whisper-gpu", label: "whisper.cpp (GPU)" },
+          ]}
+        />
+      </Row>
+      <Row label="Precisão máxima na transcrição" hint="Busca em feixe (beam search): ~3× mais lenta, ganho pequeno em áudios difíceis.">
+        <Switch checked={s.voiceAccurate} onChange={(v) => app.saveSettings({ voiceAccurate: v })} />
+      </Row>
+    </>
+  );
+}
+
 /** Which program generates images when both are installed. */
 function ImageEngineRow() {
   const app = useApp();
@@ -359,7 +406,7 @@ function ToolsSection() {
       .finally(() => setProbing(false));
   };
   return (
-    <Section title="Ferramentas" footer="whisperfile e diffusionfile vêm da release oficial do llamafile; stable-diffusion.cpp e Piper, dos projetos originais no GitHub. Tudo roda localmente.">
+    <Section title="Ferramentas" footer="whisperfile e diffusionfile vêm da release do llamafile; whisper.cpp com GPU é compilado pelo projeto; stable-diffusion.cpp e Piper vêm dos projetos originais. Tudo roda localmente.">
       {app.tools
         .filter((t) => t.tool !== "llamafile")
         .map((t) => {
@@ -384,7 +431,7 @@ function ToolsSection() {
                       {t.gpu ? `GPU · ${t.backends.filter((b) => b.toUpperCase() !== "CPU").join(", ")}` : "só CPU"}
                     </span>
                   )}
-                  {t.installed && t.tool !== "piper" && t.tool !== "sd-cpp" && release && newer(release.version, t.version) && (
+                  {t.installed && (t.tool === "whisperfile" || t.tool === "diffusionfile") && release && newer(release.version, t.version) && (
                     <span className="rounded bg-accent/15 px-1.5 py-px text-[10.5px] font-semibold text-accent">v{release.version} disponível</span>
                   )}
                 </span>
@@ -407,14 +454,14 @@ function ToolsSection() {
                   icon={<Download className="size-3.5" />}
                   onClick={() => api.downloadTool(t.tool).catch((e) => app.toast(errorText(e), "error"))}
                 >
-                  {t.installed ? "Atualizar" : t.tool === "sd-cpp" ? "Baixar (GPU)" : "Baixar"}
+                  {t.installed ? "Atualizar" : t.tool === "sd-cpp" || t.tool === "whisper-gpu" ? "Baixar (GPU)" : "Baixar"}
                 </Button>
               )}
-              {t.installed && !d && t.tool === "sd-cpp" && (
+              {t.installed && !d && (t.tool === "sd-cpp" || t.tool === "whisper-gpu") && (
                 <Button
                   size="sm"
                   variant="plain"
-                  onClick={() => confirm("Remover o stable-diffusion.cpp?") && api.removeTool(t.tool).catch((e) => app.toast(errorText(e), "error"))}
+                  onClick={() => confirm(`Remover o ${toolLabels[t.tool].name}?`) && api.removeTool(t.tool).catch((e) => app.toast(errorText(e), "error"))}
                 >
                   Remover
                 </Button>
@@ -427,6 +474,7 @@ function ToolsSection() {
             </Row>
           );
         })}
+      <VoiceEngineRow />
       <ImageEngineRow />
       {emb && emb.state !== "missing" && (
         <Row

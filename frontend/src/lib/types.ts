@@ -40,6 +40,8 @@ export interface Settings {
   fastDecode: boolean;
   closeToTray: boolean;
   imageEngine: "auto" | "diffusionfile" | "sd-cpp";
+  voiceEngine: "auto" | "whisperfile" | "whisper-gpu";
+  voiceAccurate: boolean;
   videoModelId: string;
   ttsVoiceId: string;
   ttsSpeed: number;
@@ -216,7 +218,7 @@ export interface ConversationDetail {
 // ---------------------------------------------------------------- tools
 
 export interface ToolStatus {
-  tool: "llamafile" | "whisperfile" | "diffusionfile" | "sd-cpp" | "piper";
+  tool: "llamafile" | "whisperfile" | "whisper-gpu" | "diffusionfile" | "sd-cpp" | "piper";
   installed: boolean;
   path: string;
   version: string;

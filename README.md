@@ -81,6 +81,14 @@ resuma no chat. Usa os modelos Whisper; o áudio gravado é apagado depois da tr
 
 <p align="center"><img src="docs/screenshots/voice.png" width="760" alt="Transcrição de voz" /></p>
 
+**Transcrição na GPU e vídeos:** o `whisperfile` do llamafile roda só na CPU. Em *Configurações →
+Ferramentas* dá para baixar o **whisper.cpp com GPU** (Vulkan no Linux e no Windows, Metal no Mac),
+compilado pelo CI deste projeto e anexado às releases. Numa RTX 2060, 69 s de fala levam 3 s com o
+Large v3 Turbo, contra ~100 s do Base na CPU. A decodificação padrão é a gulosa (bem mais rápida); a
+busca em feixe fica na opção *Precisão máxima*. Com o `ffmpeg` instalado, também é possível
+transcrever **vídeos** (MP4, MKV, MOV, WebM…). As recomendações de voz levam a GPU em conta e
+evitam modelos mais lentos que o tempo real.
+
 ### 🔊 Leitura em voz alta
 As respostas do chat podem ser ouvidas com vozes neurais do [Piper](https://github.com/rhasspy/piper)
 (Faber, Cadu e Jeff em português, além de inglês e espanhol). O Piper é instalado em

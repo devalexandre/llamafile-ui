@@ -13,6 +13,7 @@ import (
 
 var (
 	whisperBackendRe = regexp.MustCompile(`registered backend (\S+)`)
+	whisperUsingRe   = regexp.MustCompile(`using ([A-Za-z]+)\d* backend`) // whisper.cpp: "using Vulkan0 backend"
 	diffusionDevRe   = regexp.MustCompile(`#\d+: (.+)`)
 	diffusionUsingRe = regexp.MustCompile(`Using (\S+) backend`)
 	ggmlLoadedRe     = regexp.MustCompile(`loaded (\S+) backend from`) // newer ggml builds with dynamic backends
@@ -68,6 +69,9 @@ func parseBackends(t Tool, log string) []string {
 	}
 	switch t {
 	case Whisper:
+		for _, m := range whisperUsingRe.FindAllStringSubmatch(log, -1) {
+			add(m[1])
+		}
 		for _, m := range whisperBackendRe.FindAllStringSubmatch(log, -1) {
 			add(m[1])
 		}

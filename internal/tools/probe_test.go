@@ -25,6 +25,11 @@ load_backend: loaded CPU backend from /x/libggml-cpu-haswell.so`
 	if got := parseBackends(Diffusion, sdcpp); !reflect.DeepEqual(got, []string{"Vulkan", "CPU"}) {
 		t.Fatalf("sd.cpp: %v", got)
 	}
+	wcpp := `whisper_backend_init_gpu: device 0: Vulkan0 (type: 1)
+whisper_backend_init_gpu: using Vulkan0 backend`
+	if got := parseBackends(Whisper, wcpp); !reflect.DeepEqual(got, []string{"Vulkan"}) {
+		t.Fatalf("whisper.cpp: %v", got)
+	}
 	if !Newer("0.10.7", "0.10.6") || Newer("0.10.6", "0.10.6") || !Newer("0.11.0", "0.10.9") {
 		t.Fatal("Newer")
 	}

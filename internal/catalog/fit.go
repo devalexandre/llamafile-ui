@@ -206,6 +206,11 @@ func EvaluateWith(m *Model, f File, category string, hw hardware.Info, contextSi
 
 	w := weightsFor(category)
 	fit.Score = w.quality*fit.QualityScore + w.speed*fit.SpeedScore + w.fit*fit.FitScore + w.context*fit.ContextScore
+	if fit.SpeedLabel == "Lento" && category != "embedding" {
+		// Too slow on this machine (e.g. transcription slower than the audio):
+		// recommend a faster model instead, even if a bit less accurate.
+		fit.Score -= 20
+	}
 	if fit.Level == "tight" {
 		fit.Score = fit.Score*0.2 - 100 // always below anything that runs
 	}
@@ -280,8 +285,8 @@ func evaluateLLM(m *Model, f File, category string, hw hardware.Info, contextSiz
 func setSpeed(fit *Fit, kind, category string) {
 	switch kind {
 	case "voice":
-		fit.SpeedScore = 100 * math.Exp(-fit.RealtimeFactor/3)
-		fit.SpeedLabel = label(fit.RealtimeFactor, [3]float64{0.5, 1, 3}, true)
+		fit.SpeedScore = 100 * math.Exp(-fit.RealtimeFactor)
+		fit.SpeedLabel = label(fit.RealtimeFactor, [3]float64{0.25, 0.6, 1}, true)
 	case "tts":
 		fit.SpeedScore = 100 * math.Exp(-fit.RealtimeFactor/0.5)
 		fit.SpeedLabel = label(fit.RealtimeFactor, [3]float64{0.2, 0.5, 1}, true)
@@ -334,8 +339,14 @@ func evaluateWhisper(m *Model, f File, hw hardware.Info) Fit {
 	fit := Fit{Mode: mode, RequiredGB: required}
 	fit.Utilization = utilization(required, pool)
 	fit.Level = levelFor(fit.Utilization)
-	// Calibrated: whisper base (74M) ≈ 2× realtime on the reference CPU.
-	fit.RealtimeFactor = m.ParamsB * 27 * factor
+	// Measured with greedy decoding (the app default) on 69 s of speech:
+	// Base on the reference CPU (Ryzen 5 1600) 0.87× the audio length;
+	// Large v3 Turbo on an RTX 2060 (Vulkan) 0.047×.
+	if mode == "GPU" {
+		fit.RealtimeFactor = 0.02 + m.ParamsB*0.45*factor
+	} else {
+		fit.RealtimeFactor = m.ParamsB * 11.8 * factor
+	}
 	setSpeed(&fit, "voice", "voice")
 	fit.ContextScore = 100
 	return fit

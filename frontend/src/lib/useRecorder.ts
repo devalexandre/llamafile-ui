@@ -24,7 +24,7 @@ export function useRecorder() {
     return () => offs.forEach((off) => off());
   }, []);
 
-  const ready = !!app.tool("whisperfile")?.installed && app.voiceModels.length > 0;
+  const ready = (!!app.tool("whisperfile")?.installed || !!app.tool("whisper-gpu")?.installed) && app.voiceModels.length > 0;
 
   const start = useCallback(async () => {
     try {

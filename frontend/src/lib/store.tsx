@@ -88,6 +88,7 @@ function applyTheme(theme: Settings["theme"] | undefined) {
 const toolNames: Record<string, string> = {
   "tool:llamafile": "llamafile",
   "tool:whisperfile": "whisperfile",
+  "tool:whisper-gpu": "whisper.cpp (GPU)",
   "tool:diffusionfile": "diffusionfile",
   "tool:sd-cpp": "stable-diffusion.cpp (GPU)",
   "tool:piper": "Piper",

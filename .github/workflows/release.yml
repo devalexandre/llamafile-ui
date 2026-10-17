@@ -146,8 +146,81 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  # whisper.cpp with GPU (Vulkan / Metal). Upstream publishes no Linux binaries
+  # and llamafile's whisperfile is CPU-only; the app downloads these packages
+  # from its own release (Settings → Tools). Failures do not block the release.
+  whisper-gpu:
+    needs: [version]
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            os: ubuntu-22.04 # older glibc: runs on more distributions
+          - name: windows-x64
+            os: windows-latest
+          - name: macos-arm64
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      WHISPER_CPP: v1.9.5
+    steps:
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          path: whisper-gpu-${{ matrix.name }}.zip
+          key: whisper-gpu-${{ matrix.name }}-v1.9.5-1
+
+      - name: Vulkan SDK
+        if: steps.cache.outputs.cache-hit != 'true' && matrix.name != 'macos-arm64'
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          vulkan_version: 1.4.309.0
+          install_runtime: true
+          cache: true
+          stripdown: true
+
+      - name: Build
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "$WHISPER_CPP" https://github.com/ggml-org/whisper.cpp.git src
+          common="-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=OFF -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_SERVER=OFF"
+          case "${{ matrix.name }}" in
+            linux-x64)
+              cmake -S src -B build $common -DGGML_VULKAN=ON -DGGML_OPENMP=OFF \
+                -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc" ;;
+            windows-x64)
+              cmake -S src -B build $common -DGGML_VULKAN=ON ;;
+            macos-arm64)
+              cmake -S src -B build $common -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON -DCMAKE_OSX_ARCHITECTURES=arm64 ;;
+          esac
+          cmake --build build --config Release --target whisper-cli -j 4
+          mkdir pkg
+          find build -type f \( -name 'whisper-cli' -o -name 'whisper-cli.exe' \) -exec cp {} pkg/ \;
+          cp src/LICENSE pkg/LICENSE-whisper.cpp
+          echo "$WHISPER_CPP" > pkg/VERSION
+          ls -la pkg
+
+      - name: Package
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a "whisper-gpu-${{ matrix.name }}.zip" ./pkg/*
+          else
+            (cd pkg && zip -9 "../whisper-gpu-${{ matrix.name }}.zip" *)
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: whisper-gpu-${{ matrix.name }}
+          path: whisper-gpu-${{ matrix.name }}.zip
+          if-no-files-found: error
+
   release:
-    needs: [version, build]
+    needs: [version, build, whisper-gpu]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     steps:

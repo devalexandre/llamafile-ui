@@ -91,6 +91,7 @@ export const api = {
   downloadTool: (tool: string, thin = false) => App.DownloadTool(tool, thin),
   removeTool: (tool: string) => App.RemoveTool(tool),
   activeImageEngine: () => call<string>(App.ActiveImageEngine()),
+  activeVoiceEngine: () => call<string>(App.ActiveVoiceEngine()),
   detectToolGPU: () => call<ToolStatus[]>(App.DetectToolGPU()),
   runtime: () => call<RuntimeStatus>(App.GetRuntimeStatus()),
   embedder: () => call<RuntimeStatus>(App.GetEmbedderStatus()),

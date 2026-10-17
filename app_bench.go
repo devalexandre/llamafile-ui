@@ -186,11 +186,8 @@ func (a *App) ResetBenchmarks() {
 // (new install or new version) for GPU backends.
 func (a *App) detectToolGPU(force bool) {
 	changed := false
-	for _, t := range []tools.Tool{tools.Whisper, tools.Diffusion, tools.SDCpp} {
-		bin, version := tools.Find(t, "")
-		if t == tools.SDCpp {
-			bin, version = tools.SDCppBinary()
-		}
+	for _, t := range []tools.Tool{tools.Whisper, tools.WhisperGPU, tools.Diffusion, tools.SDCpp} {
+		bin, version := a.nativeOrFind(t)
 		if bin == "" {
 			continue
 		}
@@ -198,14 +195,17 @@ func (a *App) detectToolGPU(force bool) {
 			continue
 		}
 		model := ""
-		if t == tools.Whisper {
+		if t == tools.Whisper || t == tools.WhisperGPU {
 			if v, err := a.voiceModel(); err == nil {
 				model = a.catalog.ModelPath(v.ID)
 			}
 		}
 		kind := t
-		if t == tools.SDCpp {
+		switch t {
+		case tools.SDCpp:
 			kind = tools.Diffusion // same program, same logs
+		case tools.WhisperGPU:
+			kind = tools.Whisper
 		}
 		backends, err := tools.ProbeBackends(context.Background(), kind, bin, model)
 		if err != nil {
@@ -222,10 +222,7 @@ func (a *App) detectToolGPU(force bool) {
 
 // toolGPU reports whether the installed build of a tool has a GPU backend.
 func (a *App) toolGPU(t tools.Tool) (bench.Capability, bool) {
-	bin, version := tools.Find(t, "")
-	if t == tools.SDCpp {
-		bin, version = tools.SDCppBinary()
-	}
+	bin, version := a.nativeOrFind(t)
 	if bin == "" {
 		return bench.Capability{}, false
 	}
