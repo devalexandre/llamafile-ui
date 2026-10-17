@@ -1,4 +1,4 @@
-package tts
+package archive
 
 import (
 	"os"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// PIPER_TGZ=piper_linux_x86_64.tar.gz go test -run TestExtract ./internal/tts
+// PIPER_TGZ=piper_linux_x86_64.tar.gz go test -run TestExtract ./internal/archive
 func TestExtractRealArchive(t *testing.T) {
 	archive := os.Getenv("PIPER_TGZ")
 	if archive == "" {

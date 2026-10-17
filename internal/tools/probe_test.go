@@ -19,6 +19,12 @@ whisper_backend_init_gpu: using CUDA0 backend`
 	if got := parseBackends(Diffusion, diffusion); !reflect.DeepEqual(got, []string{"CPU"}) {
 		t.Fatalf("diffusion: %v", got)
 	}
+	sdcpp := `ggml_vulkan: 0 = NVIDIA GeForce RTX 2060 (NVIDIA) | uma: 0
+load_backend: loaded Vulkan backend from /x/libggml-vulkan.so
+load_backend: loaded CPU backend from /x/libggml-cpu-haswell.so`
+	if got := parseBackends(Diffusion, sdcpp); !reflect.DeepEqual(got, []string{"Vulkan", "CPU"}) {
+		t.Fatalf("sd.cpp: %v", got)
+	}
 	if !Newer("0.10.7", "0.10.6") || Newer("0.10.6", "0.10.6") || !Newer("0.11.0", "0.10.9") {
 		t.Fatal("Newer")
 	}

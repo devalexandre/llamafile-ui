@@ -15,6 +15,7 @@ var (
 	whisperBackendRe = regexp.MustCompile(`registered backend (\S+)`)
 	diffusionDevRe   = regexp.MustCompile(`#\d+: (.+)`)
 	diffusionUsingRe = regexp.MustCompile(`Using (\S+) backend`)
+	ggmlLoadedRe     = regexp.MustCompile(`loaded (\S+) backend from`) // newer ggml builds with dynamic backends
 )
 
 // ProbeBackends runs a whisperfile or diffusionfile build for a fraction of a
@@ -72,6 +73,9 @@ func parseBackends(t Tool, log string) []string {
 		}
 	case Diffusion:
 		for _, m := range diffusionUsingRe.FindAllStringSubmatch(log, -1) {
+			add(m[1])
+		}
+		for _, m := range ggmlLoadedRe.FindAllStringSubmatch(log, -1) {
 			add(m[1])
 		}
 		for _, m := range diffusionDevRe.FindAllStringSubmatch(log, -1) {

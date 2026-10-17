@@ -229,6 +229,9 @@ func evaluateLLM(m *Model, f File, category string, hw hardware.Info, contextSiz
 	perToken := weightsGB * active / m.ParamsB
 
 	ram, vram := hw.UsableRAMGB, hw.UsableVRAMGB
+	if hw.LLMCPUOnly && !hw.UnifiedMemory {
+		vram = 0
+	}
 	gpuBW, cpuBW := hw.GPUBandwidthGBps, hw.CPUBandwidthGBps
 
 	var fit Fit

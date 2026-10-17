@@ -81,6 +81,8 @@ const toolNames: Record<string, string> = {
   "tool:llamafile": "llamafile",
   "tool:whisperfile": "whisperfile",
   "tool:diffusionfile": "diffusionfile",
+  "tool:sd-cpp": "stable-diffusion.cpp (GPU)",
+  "tool:piper": "Piper",
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {

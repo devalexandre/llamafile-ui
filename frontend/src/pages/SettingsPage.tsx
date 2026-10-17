@@ -232,6 +232,10 @@ function BenchSection() {
 const toolLabels: Record<string, { name: string; hint: string }> = {
   whisperfile: { name: "whisperfile", hint: "Transcrição de voz e ditado (whisper.cpp)." },
   diffusionfile: { name: "diffusionfile", hint: "Geração de imagens (stable-diffusion.cpp)." },
+  "sd-cpp": {
+    name: "stable-diffusion.cpp",
+    hint: "Motor de imagens com GPU (Vulkan, ou Metal no Mac), do projeto original do diffusionfile. Mesmos modelos, bem mais rápido.",
+  },
   piper: { name: "Piper", hint: "Leitura das respostas em voz alta (projeto Piper, roda na CPU)." },
 };
 
@@ -297,6 +301,44 @@ function SpeechSection() {
   );
 }
 
+/** Which program generates images when both are installed. */
+function ImageEngineRow() {
+  const app = useApp();
+  const s = app.settings!;
+  const df = app.tool("diffusionfile");
+  const sd = app.tool("sd-cpp");
+  const [active, setActive] = useState("");
+  useEffect(() => {
+    api
+      .activeImageEngine()
+      .then(setActive)
+      .catch(() => {});
+  }, [s.imageEngine, df?.installed, sd?.installed]);
+  if (!df?.installed && !sd?.installed) return null;
+  const names: Record<string, string> = { diffusionfile: "diffusionfile", "sd-cpp": "stable-diffusion.cpp" };
+  return (
+    <Row
+      label="Motor de imagens"
+      hint={
+        <>
+          Em uso: <span className="font-medium text-fg">{names[active] ?? "nenhum"}</span>
+          {s.imageEngine === "auto" && " · Automático usa a versão com GPU quando estiver instalada."}
+        </>
+      }
+    >
+      <Select
+        value={s.imageEngine}
+        onChange={(v) => app.saveSettings({ imageEngine: v as Settings["imageEngine"] })}
+        options={[
+          { value: "auto", label: "Automático" },
+          { value: "diffusionfile", label: "diffusionfile (CPU)" },
+          { value: "sd-cpp", label: "stable-diffusion.cpp (GPU)" },
+        ]}
+      />
+    </Row>
+  );
+}
+
 /** Other executables from the llamafile release + the embeddings server. */
 function ToolsSection() {
   const app = useApp();
@@ -317,7 +359,7 @@ function ToolsSection() {
       .finally(() => setProbing(false));
   };
   return (
-    <Section title="Ferramentas" footer="whisperfile e diffusionfile vêm da release oficial do llamafile; o Piper, do projeto Piper. Tudo roda localmente.">
+    <Section title="Ferramentas" footer="whisperfile e diffusionfile vêm da release oficial do llamafile; stable-diffusion.cpp e Piper, dos projetos originais no GitHub. Tudo roda localmente.">
       {app.tools
         .filter((t) => t.tool !== "llamafile")
         .map((t) => {
@@ -326,19 +368,23 @@ function ToolsSection() {
             <Row
               key={t.tool}
               label={
-                <span className="flex items-center gap-2">
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <StatusDot state={t.installed ? "running" : "stopped"} />
-                  {toolLabels[t.tool].name}
-                  {t.installed && <span className="text-[11.5px] text-muted">v{t.version}</span>}
+                  <span className="whitespace-nowrap">{toolLabels[t.tool].name}</span>
+                  {t.installed && (
+                    <span className="text-[11.5px] whitespace-nowrap text-muted">
+                      {/^\d/.test(t.version) ? `v${t.version}` : t.version}
+                    </span>
+                  )}
                   {t.installed && t.probed && (
                     <span
                       title={`Backends: ${t.backends.join(", ")}`}
-                      className={clsx("rounded px-1.5 py-px text-[10.5px] font-semibold", t.gpu ? "bg-ok/15 text-ok" : "bg-hover text-muted")}
+                      className={clsx("rounded px-1.5 py-px text-[10.5px] font-semibold whitespace-nowrap", t.gpu ? "bg-ok/15 text-ok" : "bg-hover text-muted")}
                     >
                       {t.gpu ? `GPU · ${t.backends.filter((b) => b.toUpperCase() !== "CPU").join(", ")}` : "só CPU"}
                     </span>
                   )}
-                  {t.installed && t.tool !== "piper" && release && newer(release.version, t.version) && (
+                  {t.installed && t.tool !== "piper" && t.tool !== "sd-cpp" && release && newer(release.version, t.version) && (
                     <span className="rounded bg-accent/15 px-1.5 py-px text-[10.5px] font-semibold text-accent">v{release.version} disponível</span>
                   )}
                 </span>
@@ -361,7 +407,16 @@ function ToolsSection() {
                   icon={<Download className="size-3.5" />}
                   onClick={() => api.downloadTool(t.tool).catch((e) => app.toast(errorText(e), "error"))}
                 >
-                  {t.installed ? "Atualizar" : "Baixar"}
+                  {t.installed ? "Atualizar" : t.tool === "sd-cpp" ? "Baixar (GPU)" : "Baixar"}
+                </Button>
+              )}
+              {t.installed && !d && t.tool === "sd-cpp" && (
+                <Button
+                  size="sm"
+                  variant="plain"
+                  onClick={() => confirm("Remover o stable-diffusion.cpp?") && api.removeTool(t.tool).catch((e) => app.toast(errorText(e), "error"))}
+                >
+                  Remover
                 </Button>
               )}
               {t.installed && !d && t.tool !== "piper" && (
@@ -372,6 +427,7 @@ function ToolsSection() {
             </Row>
           );
         })}
+      <ImageEngineRow />
       {emb && emb.state !== "missing" && (
         <Row
           label={

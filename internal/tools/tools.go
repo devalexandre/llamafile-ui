@@ -185,11 +185,12 @@ func Target(rel Release, t Tool, thin bool) (url, dest string, size int64, ok bo
 	return a.URL, filepath.Join(paths.BinDir(), fileName(t, rel.Version, thin)), a.Size, true
 }
 
-// Command builds an exec.Cmd for an APE binary. Running it via sh avoids
-// binfmt_misc handlers (e.g. Wine) hijacking it on Linux.
+// Command builds an exec.Cmd for a tool. APE binaries (llamafile & co.) run
+// via sh, which avoids binfmt_misc handlers (e.g. Wine) hijacking them on
+// Linux; native executables (stable-diffusion.cpp) run directly.
 func Command(ctx context.Context, bin string, args ...string) *exec.Cmd {
 	var cmd *exec.Cmd
-	if goruntime.GOOS == "windows" {
+	if goruntime.GOOS == "windows" || !isAPE(bin) {
 		cmd = exec.CommandContext(ctx, bin, args...)
 	} else {
 		cmd = exec.CommandContext(ctx, "sh", append([]string{bin}, args...)...)
@@ -200,6 +201,19 @@ func Command(ctx context.Context, bin string, args ...string) *exec.Cmd {
 		return nil
 	}
 	return cmd
+}
+
+// isAPE reports whether a file is an Actually Portable Executable, whose
+// header ("MZqFpD") is also a shell script.
+func isAPE(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return true
+	}
+	defer f.Close()
+	head := make([]byte, 6)
+	n, _ := f.Read(head)
+	return string(head[:n]) == "MZqFpD"
 }
 
 // Threads is a sensible thread count for CPU-bound tools.

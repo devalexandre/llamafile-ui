@@ -15,7 +15,6 @@ import (
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/rag"
-	"github.com/devalexandre/llamafile-ui/internal/tools"
 	"github.com/devalexandre/llamafile-ui/internal/voice"
 )
 
@@ -114,8 +113,8 @@ func (a *App) GenerateChatImage(conversationID, chatModelID, text, reference str
 	if text == "" {
 		return chat.Conversation{}, errors.New("descreva a imagem que você quer")
 	}
-	if a.toolPath(tools.Diffusion) == "" {
-		return chat.Conversation{}, errors.New("instale o diffusionfile em Configurações → Ferramentas para gerar imagens")
+	if bin, _ := a.imageBinary(); bin == "" {
+		return chat.Conversation{}, errors.New("instale um motor de imagens em Configurações → Ferramentas para gerar imagens")
 	}
 	models := a.installedFor("image", a.settings.Get().ImageModelID)
 	if len(models) == 0 {

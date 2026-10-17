@@ -197,12 +197,13 @@ func (a *App) fitHardware() hardware.Info {
 	if c, ok := a.toolGPU(tools.Whisper); ok {
 		hw.WhisperGPU = c.GPU
 	}
-	if c, ok := a.toolGPU(tools.Diffusion); ok {
-		hw.DiffusionGPU = c.GPU
+	if _, engine := a.imageBinary(); engine != "" {
+		if c, ok := a.toolGPU(engine); ok {
+			hw.DiffusionGPU = c.GPU
+		}
 	}
-	if a.runtime.Status().Thin && !hw.UnifiedMemory {
-		hw.VRAMGB, hw.UsableVRAMGB, hw.GPUBandwidthGBps = 0, 0, 0
-	}
+	// The thin llamafile only affects LLMs: image and voice tools may still use the GPU.
+	hw.LLMCPUOnly = a.runtime.Status().Thin
 	return hw
 }
 
@@ -457,6 +458,9 @@ func (a *App) GetLogs() []string    { return a.runtime.Logs() }
 func (a *App) toolInstalled(key, dest string) error {
 	if key == tools.DownloadKey(piperTool) {
 		return tts.Install(dest)
+	}
+	if key == tools.DownloadKey(tools.SDCpp) {
+		return tools.InstallSDCpp(dest, sdcppVersion(dest))
 	}
 	if key == tools.DownloadKey(tools.Llamafile) {
 		if err := a.updateSettings(func(s *settings.Settings) { s.LlamafilePath = dest }); err != nil {

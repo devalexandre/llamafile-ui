@@ -29,6 +29,7 @@ type Settings struct {
 	EmbedModelID  string `json:"embedModelId"`
 	ImageModelID  string `json:"imageModelId"`
 	FastDecode    bool   `json:"fastDecode"`  // TAESD for image decoding
+	ImageEngine   string `json:"imageEngine"` // auto, diffusionfile, sd-cpp (stable-diffusion.cpp with GPU)
 	CloseToTray   bool   `json:"closeToTray"` // closing the window keeps the app in the system tray
 
 	TTSVoiceID string  `json:"ttsVoiceId"` // Piper voice used to read answers aloud
@@ -50,6 +51,7 @@ func Defaults() Settings {
 		AutoTitle:     true,
 		VoiceLanguage: "auto",
 		FastDecode:    true,
+		ImageEngine:   "auto",
 		CloseToTray:   true,
 		TTSSpeed:      1,
 	}
@@ -96,6 +98,9 @@ func sanitize(s Settings) Settings {
 	}
 	if s.VoiceLanguage == "" {
 		s.VoiceLanguage = d.VoiceLanguage
+	}
+	if s.ImageEngine != "diffusionfile" && s.ImageEngine != "sd-cpp" {
+		s.ImageEngine = "auto"
 	}
 	if s.TTSSpeed < 0.5 || s.TTSSpeed > 2 {
 		s.TTSSpeed = d.TTSSpeed

@@ -794,7 +794,8 @@ export function ChatPage() {
     },
     [convId, modelId, app],
   );
-  const imageReady = app.imageModels.length > 0 && app.tools.some((t) => t.tool === "diffusionfile" && t.installed);
+  const imageReady =
+    app.imageModels.length > 0 && app.tools.some((t) => (t.tool === "diffusionfile" || t.tool === "sd-cpp") && t.installed);
 
   const changeModel = (id: string) => {
     setModelId(id);

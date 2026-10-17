@@ -582,7 +582,11 @@ export function ImagesPage() {
       <header className="drag flex h-[52px] shrink-0 items-center border-b border-line px-6">
         <h1 className="text-[14px] font-semibold">Imagens</h1>
       </header>
-      <ToolGate tool="diffusionfile" icon={<ImagePlus className="size-6" />}>
+      <ToolGate
+        tool="diffusionfile"
+        alternative={{ tool: "sd-cpp", label: "Baixar versão com GPU" }}
+        icon={<ImagePlus className="size-6" />}
+      >
         <ModelGate category="image" models={app.imageModels} icon={<ImagePlus className="size-6" />}>
           <Generator />
         </ModelGate>

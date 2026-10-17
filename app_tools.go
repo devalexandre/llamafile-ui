@@ -48,7 +48,7 @@ func (a *App) GetTools() []ToolStatus {
 		}
 		out = append(out, s)
 	}
-	return append(out, a.piperStatus())
+	return append(out, a.sdcppStatus(), a.piperStatus())
 }
 
 func (a *App) GetLatestRelease() tools.Release { return tools.LatestRelease(a.ctx) }
@@ -59,6 +59,9 @@ func (a *App) DownloadTool(name string, thin bool) error {
 	t := tools.Tool(name)
 	if t == piperTool {
 		return a.downloadPiper()
+	}
+	if t == tools.SDCpp {
+		return a.downloadSDCpp()
 	}
 	rel := tools.LatestRelease(a.ctx)
 	url, dest, size, ok := tools.Target(rel, t, thin)

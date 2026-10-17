@@ -316,7 +316,7 @@ func (g *Generator) run(ctx context.Context, jobID, bin string, spec ModelSpec, 
 		if ctx.Err() != nil {
 			return Image{}, ctx.Err()
 		}
-		return Image{}, fmt.Errorf("diffusionfile falhou: %s", lastError(tail))
+		return Image{}, fmt.Errorf("o motor de imagens falhou: %s", lastError(tail))
 	}
 	if _, err := os.Stat(out); err != nil {
 		return Image{}, fmt.Errorf("a imagem não foi gerada: %s", lastError(tail))
@@ -340,8 +340,14 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, img.Prompt, img.Negative,
 
 func lastError(lines []string) string {
 	for i := len(lines) - 1; i >= 0; i-- {
-		if strings.Contains(lines[i], "ERROR") || strings.Contains(strings.ToLower(lines[i]), "error") {
-			return strings.TrimSpace(lines[i])
+		l := lines[i]
+		if strings.HasPrefix(l, "[E]") || strings.Contains(l, "ERROR") || strings.Contains(strings.ToLower(l), "error") {
+			// stable-diffusion.cpp: "[E] message --- file.cpp:12"
+			l = strings.TrimSpace(strings.TrimPrefix(l, "[E]"))
+			if i := strings.Index(l, " --- "); i > 0 {
+				l = l[:i]
+			}
+			return l
 		}
 	}
 	if len(lines) > 0 {

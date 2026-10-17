@@ -16,7 +16,6 @@ import (
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
-	"github.com/devalexandre/llamafile-ui/internal/tools"
 )
 
 // backend implements the interfaces used by internal packages (chat, rag,
@@ -116,7 +115,10 @@ func (a *backend) Prefixes(modelID string) (doc, query string) {
 
 // ------------------------------------------------ imagegen.Backend interface
 
-func (a *backend) Binary() string { return a.toolPath(tools.Diffusion) }
+func (a *backend) Binary() string {
+	bin, _ := a.imageBinary()
+	return bin
+}
 
 func (a *backend) Model(id string) (imagegen.ModelSpec, error) {
 	m := a.catalog.Find(id)

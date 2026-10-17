@@ -32,7 +32,9 @@ type Info struct {
 	UsableRAMGB      float64 `json:"usableRamGb"`
 	UsableVRAMGB     float64 `json:"usableVramGb"`
 	Tier             string  `json:"tier"`
-	// GPU backends detected in the installed whisperfile / diffusionfile builds.
+	// LLMCPUOnly is set when the installed llamafile is the CPU-only "thin" build.
+	LLMCPUOnly bool `json:"llmCpuOnly"`
+	// GPU backends detected in the installed whisperfile / image engine builds.
 	WhisperGPU   bool `json:"whisperGpu"`
 	DiffusionGPU bool `json:"diffusionGpu"`
 }

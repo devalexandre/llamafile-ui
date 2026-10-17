@@ -57,6 +57,12 @@ usa o modelo de chat local para traduzir e detalhar sua descrição em inglês. 
 referência** (escolhida, arrastada ou uma da galeria) é alterada seguindo a descrição, com
 intensidade ajustável e mantendo a proporção (img2img).
 
+**Imagens na GPU:** o `diffusionfile` do llamafile 0.10.x roda só na CPU. Em *Configurações →
+Ferramentas* você pode baixar o **stable-diffusion.cpp** (o projeto original do diffusionfile) com
+GPU — Vulkan no Linux e no Windows (NVIDIA, AMD e Intel), Metal no Mac com Apple Silicon. Ele usa
+os mesmos modelos; no modo *Automático* o app passa a usá-lo assim que é instalado. Numa RTX 2060
+o SD-Turbo cai de ~20 s para ~2 s por imagem.
+
 <p align="center"><img src="docs/screenshots/images.png" width="760" alt="Geração de imagens" /></p>
 
 ### 🎙️ Voz
@@ -337,7 +343,8 @@ internal/
   eventbus/                eventos Go → frontend por long-polling HTTP
   catalog/                 catálogo embutido + fit engine (recomendação)
   hardware/                detecção de CPU/RAM/GPU por sistema operacional
-  tools/                   llamafile, whisperfile e diffusionfile: release, download, execução via sh
+  tools/                   llamafile, whisperfile, diffusionfile e stable-diffusion.cpp: release, download, execução
+  archive/                 extração segura de .zip e .tar.gz
   runtime/                 servidores llamafile (chat e embeddings): iniciar, health-check, parar
   downloads/               downloads retomáveis
   chat/                    SQLite das conversas + streaming da API OpenAI + RAG no prompt
@@ -364,7 +371,7 @@ com checksums SHA-256.
 
 ## Próximos passos
 
-- Vídeo a partir de texto ou de uma imagem de referência (Wan 2.2) quando o `diffusionfile` tiver GPU.
+- Vídeo a partir de texto ou de uma imagem de referência (Wan 2.2), usando o stable-diffusion.cpp com GPU.
 - Escolher a voz automaticamente pelo idioma da resposta.
 
 ## Créditos
@@ -372,7 +379,7 @@ com checksums SHA-256.
 Construído sobre projetos incríveis: [llamafile](https://github.com/mozilla-ai/llamafile)
 (Mozilla AI), [llama.cpp](https://github.com/ggml-org/llama.cpp),
 [whisper.cpp](https://github.com/ggml-org/whisper.cpp),
-[stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp), [Piper](https://github.com/rhasspy/piper), [Wails](https://wails.io)
+[stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) (leejet), [Piper](https://github.com/rhasspy/piper), [Wails](https://wails.io)
 e [miniaudio](https://miniaud.io). Recomendações inspiradas no [llmfit](https://github.com/AlexsJones/llmfit);
 tema inspirado no [Dracula](https://draculatheme.com) e no [One Dark](https://github.com/atom/atom/tree/master/packages/one-dark-ui).
 Os modelos pertencem aos seus autores e seguem as respectivas licenças.

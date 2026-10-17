@@ -39,6 +39,7 @@ export interface Settings {
   imageModelId: string;
   fastDecode: boolean;
   closeToTray: boolean;
+  imageEngine: "auto" | "diffusionfile" | "sd-cpp";
   ttsVoiceId: string;
   ttsSpeed: number;
   autoSpeak: boolean;
@@ -184,7 +185,7 @@ export interface ConversationDetail {
 // ---------------------------------------------------------------- tools
 
 export interface ToolStatus {
-  tool: "llamafile" | "whisperfile" | "diffusionfile" | "piper";
+  tool: "llamafile" | "whisperfile" | "diffusionfile" | "sd-cpp" | "piper";
   installed: boolean;
   path: string;
   version: string;
