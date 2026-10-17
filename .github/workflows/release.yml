@@ -72,6 +72,11 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      # The wails3 CLI itself links GTK4/WebKitGTK on Linux, so deps come first.
+      - name: Linux deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev libfuse2
+
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
 
@@ -84,10 +89,6 @@ jobs:
           done
 
       # ---------------------------------------------------------------- Linux
-      - name: Linux deps
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev libfuse2
-
       - name: Package (Linux)
         if: runner.os == 'Linux'
         run: |
