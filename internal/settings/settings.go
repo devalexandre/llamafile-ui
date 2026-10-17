@@ -30,6 +30,10 @@ type Settings struct {
 	ImageModelID  string `json:"imageModelId"`
 	FastDecode    bool   `json:"fastDecode"`  // TAESD for image decoding
 	CloseToTray   bool   `json:"closeToTray"` // closing the window keeps the app in the system tray
+
+	TTSVoiceID string  `json:"ttsVoiceId"` // Piper voice used to read answers aloud
+	TTSSpeed   float64 `json:"ttsSpeed"`   // 1 = normal
+	AutoSpeak  bool    `json:"autoSpeak"`  // read every new answer aloud
 }
 
 func Defaults() Settings {
@@ -47,6 +51,7 @@ func Defaults() Settings {
 		VoiceLanguage: "auto",
 		FastDecode:    true,
 		CloseToTray:   true,
+		TTSSpeed:      1,
 	}
 }
 
@@ -91,6 +96,9 @@ func sanitize(s Settings) Settings {
 	}
 	if s.VoiceLanguage == "" {
 		s.VoiceLanguage = d.VoiceLanguage
+	}
+	if s.TTSSpeed < 0.5 || s.TTSSpeed > 2 {
+		s.TTSSpeed = d.TTSSpeed
 	}
 	if s.Temperature < 0 || s.Temperature > 2 {
 		s.Temperature = d.Temperature

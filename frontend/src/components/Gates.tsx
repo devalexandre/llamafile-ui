@@ -17,6 +17,10 @@ const toolInfo: Record<ToolStatus["tool"], { title: string; text: string }> = {
     title: "Instale o diffusionfile",
     text: "Motor de geração de imagens do projeto llamafile (stable-diffusion.cpp). É um único executável.",
   },
+  piper: {
+    title: "Instale o Piper",
+    text: "Motor de leitura em voz alta (texto para fala) que roda na CPU, com vozes naturais em português.",
+  },
 };
 
 /** Shows a download card while a llamafile-release tool is missing. */

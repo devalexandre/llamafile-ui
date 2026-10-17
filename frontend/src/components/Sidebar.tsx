@@ -8,6 +8,7 @@ import {
   FileJson,
   FileText,
   HardDrive,
+  MessageSquare,
   MoreHorizontal,
   Pencil,
   Pin,
@@ -119,6 +120,7 @@ export function Sidebar() {
       </div>
 
       <nav className="space-y-0.5 px-2.5">
+        <NavItem page="chat" icon={<MessageSquare className="size-4" />} label="Chat" />
         <NavItem page="images" icon={<ImagePlus className="size-4" />} label="Imagens" />
         <NavItem page="voice" icon={<AudioLines className="size-4" />} label="Transcrição" />
         <NavItem

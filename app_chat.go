@@ -21,9 +21,10 @@ import (
 // ------------------------------------------------------------------ chat
 
 type ConversationDetail struct {
-	Conversation chat.Conversation `json:"conversation"`
-	Messages     []chat.Message    `json:"messages"`
-	Generating   bool              `json:"generating"`
+	Conversation    chat.Conversation `json:"conversation"`
+	Messages        []chat.Message    `json:"messages"`
+	Generating      bool              `json:"generating"`
+	GeneratingImage bool              `json:"generatingImage"`
 }
 
 func (a *App) ListConversations(search string) ([]chat.Conversation, error) {
@@ -36,14 +37,19 @@ func (a *App) GetConversation(id string) (ConversationDetail, error) {
 		return ConversationDetail{}, err
 	}
 	msgs, err := a.chat.Store().Messages(id)
-	return ConversationDetail{Conversation: c, Messages: msgs, Generating: a.chat.IsGenerating(id)}, err
+	return ConversationDetail{Conversation: c, Messages: msgs, Generating: a.chat.IsGenerating(id),
+		GeneratingImage: a.generatingImage(id)}, err
 }
 
 func (a *App) SendMessage(conversationID, modelID, collectionID, text string, attachments []string) (chat.Conversation, error) {
 	return a.chat.Send(conversationID, modelID, collectionID, text, attachments)
 }
 
-func (a *App) StopGeneration(conversationID string)   { a.chat.Stop(conversationID) }
+func (a *App) StopGeneration(conversationID string) {
+	if !a.stopChatImage(conversationID) {
+		a.chat.Stop(conversationID)
+	}
+}
 func (a *App) Regenerate(conversationID string) error { return a.chat.Regenerate(conversationID) }
 func (a *App) EditMessage(conversationID string, messageID int64, text string) error {
 	return a.chat.Edit(conversationID, messageID, text)

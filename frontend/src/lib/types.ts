@@ -39,6 +39,9 @@ export interface Settings {
   imageModelId: string;
   fastDecode: boolean;
   closeToTray: boolean;
+  ttsVoiceId: string;
+  ttsSpeed: number;
+  autoSpeak: boolean;
 }
 
 export type FitLevel = "perfect" | "good" | "marginal" | "tight";
@@ -62,6 +65,11 @@ export interface Fit {
   contextScore: number;
   score: number;
   category: string;
+  /** Speed measured on this machine for this model. */
+  measured: boolean;
+  /** Speed adjusted by measurements of other models. */
+  calibrated: boolean;
+  samples: number;
 }
 
 export interface ModelFile {
@@ -80,7 +88,7 @@ export interface ModelView {
   context: number;
   categories: string[];
   quality: Record<string, number>;
-  runtime: "llamafile" | "whisperfile" | "diffusionfile";
+  runtime: "llamafile" | "whisperfile" | "diffusionfile" | "piper";
   repo: string;
   license: string;
   tags: string[];
@@ -170,17 +178,42 @@ export interface ConversationDetail {
   conversation: Conversation;
   messages: Message[];
   generating: boolean;
+  generatingImage: boolean;
 }
 
 // ---------------------------------------------------------------- tools
 
 export interface ToolStatus {
-  tool: "llamafile" | "whisperfile" | "diffusionfile";
+  tool: "llamafile" | "whisperfile" | "diffusionfile" | "piper";
   installed: boolean;
   path: string;
   version: string;
   thin: boolean;
   downloading: boolean;
+  backends: string[];
+  gpu: boolean;
+  probed: boolean;
+}
+
+export interface BenchRecord {
+  modelId: string;
+  quant: string;
+  kind: "llm" | "image" | "voice";
+  mode: string;
+  ratio: number;
+  value: number;
+  promptTps: number;
+  samples: number;
+  updatedAt: number;
+}
+
+export interface BenchResult {
+  modelId: string;
+  tps: number;
+  promptTps: number;
+  estimateTps: number;
+  tokens: number;
+  mode: string;
 }
 
 // ---------------------------------------------------------------- voice
@@ -252,6 +285,9 @@ export interface ImageRequest {
   seed: number;
   sampler: string;
   fastDecode: boolean;
+  /** Reference image to transform (attachment name); "" = text-to-image. */
+  initImage: string;
+  strength: number;
 }
 
 export interface ImageItem {
@@ -269,6 +305,8 @@ export interface ImageItem {
   file: string;
   durationMs: number;
   createdAt: number;
+  reference: string;
+  strength: number;
 }
 
 export interface ImageProgress {

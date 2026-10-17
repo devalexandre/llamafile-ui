@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
+	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
 )
 
@@ -44,11 +46,20 @@ func (a *App) GenerateImage(req imagegen.Request) (string, error) {
 		}
 		req.ModelID = list[0].ID
 	}
+	req.InitImage = a.referencePath(req.InitImage)
 	_ = a.updateSettings(func(s *settings.Settings) {
 		s.ImageModelID = req.ModelID
 		s.FastDecode = req.FastDecode
 	})
 	return a.images.Generate(req)
+}
+
+// referencePath resolves a reference image given as a chat attachment name.
+func (a *App) referencePath(ref string) string {
+	if ref == "" || filepath.IsAbs(ref) {
+		return ref
+	}
+	return filepath.Join(paths.AttachmentsDir(), filepath.Base(ref))
 }
 
 func (a *App) CancelImage()                          { a.images.Cancel() }

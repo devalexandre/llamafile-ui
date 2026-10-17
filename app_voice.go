@@ -89,7 +89,11 @@ func (a *App) transcribe(audio string) (voice.Result, catalog.View, time.Duratio
 	if errors.Is(err, context.Canceled) {
 		err = errors.New("transcrição cancelada")
 	}
-	return res, m, time.Since(started), err
+	took := time.Since(started)
+	if err == nil {
+		a.observeTranscription(m.ID, voice.AudioSeconds(audio, res.SRT), took)
+	}
+	return res, m, took, err
 }
 
 // StopRecording ends the microphone capture and transcribes it. When save is

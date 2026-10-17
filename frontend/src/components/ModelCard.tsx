@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { AudioLines, BookOpen, Cpu, Download, Gauge, Image as ImageIcon, ImagePlus, MemoryStick, MessageSquare, Play, Trash2, X } from "lucide-react";
+import { AudioLines, Volume2, BookOpen, Cpu, Download, Gauge, Image as ImageIcon, ImagePlus, MemoryStick, MessageSquare, Play, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../lib/api";
 import { bytes, duration, gb, params } from "../lib/format";
@@ -36,6 +36,11 @@ export function useModelActions(m: ModelView) {
       run(() => api.removeModel(m.id));
     },
     load: () => run(() => api.startModel(m.id)),
+    measure: () =>
+      run(async () => {
+        const r = await api.benchmarkModel(m.id);
+        app.toast(`${m.name}: ${r.tps.toFixed(1)} tok/s medidos (estimativa era ~${Math.round(r.estimateTps)})`, "success");
+      }),
     chat: () => {
       app.saveSettings({ lastModelId: m.id });
       app.newChat();
@@ -65,6 +70,7 @@ export function DownloadProgress({ d, onCancel }: { d: { progress: number; recei
 /** Human estimate of how fast a model runs here, per model kind. */
 export function speedText(m: ModelView): string {
   if (m.fit.secondsPerImage > 0) return `~${duration(m.fit.secondsPerImage)}/imagem`;
+  if (m.fit.realtimeFactor > 0 && m.runtime === "piper") return `${(1 / m.fit.realtimeFactor).toFixed(0)}× tempo real`;
   if (m.fit.realtimeFactor > 0) {
     const f = m.fit.realtimeFactor;
     return f < 1 ? `${(1 / f).toFixed(1)}× tempo real` : `${f.toFixed(1)}× a duração`;
@@ -73,10 +79,25 @@ export function speedText(m: ModelView): string {
   return m.fit.speedLabel;
 }
 
+/** Whether the speed shown was measured here, calibrated or only estimated. */
+export function SpeedSource({ m }: { m: ModelView }) {
+  const [text, title, cls] = m.fit.measured
+    ? ["medido", `Medido neste computador (${m.fit.samples} ${m.fit.samples === 1 ? "amostra" : "amostras"})`, "text-ok"]
+    : m.fit.calibrated
+      ? ["calibrado", "Estimativa ajustada pelas medições de outros modelos neste computador", "text-accent"]
+      : ["estimado", "Estimativa pelo hardware — use o modelo ou clique em Medir para refinar", "text-muted"];
+  return (
+    <span title={title} className={clsx("text-[10px] font-medium uppercase tracking-wide", cls)}>
+      {text}
+    </span>
+  );
+}
+
 /** Where a non-chat model is used in the app. */
 export function pageFor(m: ModelView): { page: Page; label: string; icon: React.ReactNode } | null {
   if (m.runtime === "whisperfile") return { page: "voice", label: "Transcrever", icon: <AudioLines className="size-3.5" /> };
   if (m.runtime === "diffusionfile") return { page: "images", label: "Gerar imagens", icon: <ImagePlus className="size-3.5" /> };
+  if (m.runtime === "piper") return { page: "settings", label: "Configurar leitura", icon: <Volume2 className="size-3.5" /> };
   if (m.categories.includes("embedding")) return { page: "documents", label: "Usar em Documentos", icon: <BookOpen className="size-3.5" /> };
   return null;
 }
@@ -114,7 +135,7 @@ export function ModelCard({ m, highlight }: { m: ModelView; highlight?: boolean 
       <div className="mb-3 grid grid-cols-3 gap-2 rounded-lg bg-field px-3 py-2 text-[11.5px]">
         <div>
           <div className="flex items-center gap-1 text-muted">
-            <Gauge className="size-3" /> Velocidade
+            <Gauge className="size-3" /> Velocidade <SpeedSource m={m} />
           </div>
           <div className="font-semibold" title={m.fit.speedLabel}>
             {speedText(m)}
@@ -161,6 +182,9 @@ export function ModelCard({ m, highlight }: { m: ModelView; highlight?: boolean 
                   </Button>
                 )}
                 {a.active && <span className="text-[12px] font-medium text-ok">Em uso</span>}
+                <button title="Medir a velocidade real neste computador" onClick={a.measure} disabled={a.busy} className="rounded-md p-1 text-muted hover:bg-hover hover:text-fg disabled:opacity-50">
+                  <Gauge className={clsx("size-3.5", a.busy && "animate-pulse")} />
+                </button>
               </>
             )}
             <div className="flex-1" />

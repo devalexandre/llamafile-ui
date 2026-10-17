@@ -342,14 +342,21 @@ func (s *Service) buildHistory(conv Conversation, sources []Source) ([]apiMessag
 		if m.Role == "assistant" && (m.Content == "" || m.Error != "") {
 			continue
 		}
-		used += utf8.RuneCountInString(m.Content)
+		text := m.Content
+		if m.Role == "user" {
+			text = s.withDocuments(text, m.Attachments, budget/2)
+		}
+		used += utf8.RuneCountInString(text)
 		if used > budget && len(out) > 0 {
 			break
 		}
-		var content any = m.Content
-		if m.Role == "user" && vision && len(m.Attachments) > 0 {
+		var content any = text
+		if m.Role == "user" && vision && hasImages(m.Attachments) {
 			parts := []map[string]any{}
 			for _, a := range m.Attachments {
+				if IsDocument(a) {
+					continue
+				}
 				url, err := s.imageDataURL(a)
 				if err != nil {
 					continue
@@ -357,7 +364,7 @@ func (s *Service) buildHistory(conv Conversation, sources []Source) ([]apiMessag
 				used += 1000 // images cost hundreds of tokens
 				parts = append(parts, map[string]any{"type": "image_url", "image_url": map[string]string{"url": url}})
 			}
-			parts = append(parts, map[string]any{"type": "text", "text": m.Content})
+			parts = append(parts, map[string]any{"type": "text", "text": text})
 			content = parts
 		}
 		out = append(out, apiMessage{Role: m.Role, Content: content})

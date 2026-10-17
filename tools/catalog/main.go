@@ -16,7 +16,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 )
@@ -53,6 +55,7 @@ type sourceModel struct {
 	Components    []sourceComponent  `json:"components,omitempty"`
 	Image         json.RawMessage    `json:"image,omitempty"`
 	Embed         json.RawMessage    `json:"embed,omitempty"`
+	TTS           json.RawMessage    `json:"tts,omitempty"`
 }
 
 type file struct {
@@ -83,6 +86,7 @@ type model struct {
 	Components    []file             `json:"components,omitempty"`
 	Image         json.RawMessage    `json:"image,omitempty"`
 	Embed         json.RawMessage    `json:"embed,omitempty"`
+	TTS           json.RawMessage    `json:"tts,omitempty"`
 }
 
 type treeEntry struct {
@@ -97,15 +101,22 @@ var client = &http.Client{Timeout: 60 * time.Second}
 
 type sizer struct{ cache map[string]map[string]int64 }
 
+// size returns the size of a file; name may live in a subfolder of the repo
+// (e.g. Piper voices: "pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx").
 func (s *sizer) size(repo, name string) int64 {
-	sizes, ok := s.cache[repo]
+	dir := path.Dir(name)
+	if dir == "." {
+		dir = ""
+	}
+	key := repo + "/" + dir
+	sizes, ok := s.cache[key]
 	if !ok {
-		log.Printf("fetching %s", repo)
+		log.Printf("fetching %s", key)
 		var err error
-		if sizes, err = fetchSizes(repo); err != nil {
+		if sizes, err = fetchSizes(repo, dir); err != nil {
 			log.Fatal(err)
 		}
-		s.cache[repo] = sizes
+		s.cache[key] = sizes
 	}
 	size, ok := sizes[name]
 	if !ok {
@@ -114,8 +125,12 @@ func (s *sizer) size(repo, name string) int64 {
 	return size
 }
 
-func fetchSizes(repo string) (map[string]int64, error) {
-	resp, err := client.Get("https://huggingface.co/api/models/" + repo + "/tree/main")
+func fetchSizes(repo, dir string) (map[string]int64, error) {
+	u := "https://huggingface.co/api/models/" + repo + "/tree/main"
+	if dir != "" {
+		u += "/" + (&url.URL{Path: dir}).EscapedPath()
+	}
+	resp, err := client.Get(u)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +154,7 @@ func fetchSizes(repo string) (map[string]int64, error) {
 }
 
 func resolveURL(repo, name string) string {
-	return "https://huggingface.co/" + repo + "/resolve/main/" + name
+	return "https://huggingface.co/" + repo + "/resolve/main/" + (&url.URL{Path: name}).EscapedPath()
 }
 
 func main() {
@@ -163,7 +178,7 @@ func main() {
 			ID: s.ID, Name: s.Name, Publisher: s.Publisher, ParamsB: s.ParamsB, ActiveParamsB: s.ActiveParamsB,
 			Context: s.Context, KVMBPer1K: s.KVMBPer1K, Categories: s.Categories, Quality: s.Quality,
 			Runtime: s.Runtime, Repo: s.Repo, License: s.License, Tags: s.Tags, Description: s.Description,
-			Image: s.Image, Embed: s.Embed,
+			Image: s.Image, Embed: s.Embed, TTS: s.TTS,
 		}
 		if m.Runtime == "" {
 			m.Runtime = "llamafile"
@@ -172,7 +187,8 @@ func main() {
 			m.ActiveParamsB = m.ParamsB
 		}
 		for _, q := range s.Quants {
-			m.Files = append(m.Files, file{Quant: q.Quant, File: q.File, URL: resolveURL(s.Repo, q.File), Size: sz.size(s.Repo, q.File)})
+			// Files are saved flat in the models folder.
+			m.Files = append(m.Files, file{Quant: q.Quant, File: path.Base(q.File), URL: resolveURL(s.Repo, q.File), Size: sz.size(s.Repo, q.File)})
 		}
 		if s.MMProj != "" {
 			m.MMProj = &file{File: s.MMProj, URL: resolveURL(s.Repo, s.MMProj), Size: sz.size(s.Repo, s.MMProj)}
@@ -180,7 +196,7 @@ func main() {
 		for _, c := range s.Components {
 			local := c.Local
 			if local == "" {
-				local = c.File
+				local = path.Base(c.File)
 			}
 			m.Components = append(m.Components, file{Role: c.Role, File: local, URL: resolveURL(c.Repo, c.File), Size: sz.size(c.Repo, c.File)})
 		}

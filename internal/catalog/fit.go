@@ -35,6 +35,35 @@ type Fit struct {
 	ContextScore    float64 `json:"contextScore"`
 	Score           float64 `json:"score"`
 	Category        string  `json:"category"`
+	Measured        bool    `json:"measured"`   // speed comes from runs of this model on this machine
+	Calibrated      bool    `json:"calibrated"` // estimate adjusted by runs of other models
+	Samples         int     `json:"samples"`
+}
+
+// Calibration adjusts a speed estimate with what was measured on this machine:
+// Ratio = measured / estimated (tok/s for LLMs; seconds for images and audio).
+type Calibration struct {
+	Ratio    float64
+	Measured bool // ratio comes from this exact model and quant
+	Samples  int
+}
+
+// Calibrator looks up the calibration for a model run (kind: llm, image, voice).
+type Calibrator func(modelID, quant, kind, mode string) (Calibration, bool)
+
+// KindOf groups models by how their speed is measured.
+func KindOf(m *Model, category string) string {
+	switch {
+	case m.Runtime == RuntimeWhisper:
+		return "voice"
+	case m.Runtime == RuntimeDiffusion:
+		return "image"
+	case m.Runtime == RuntimePiper:
+		return "tts"
+	case category == "embedding" || m.HasCategory("embedding"):
+		return "embedding"
+	}
+	return "llm"
 }
 
 type weights struct {
@@ -55,6 +84,8 @@ func weightsFor(category string) weights {
 		return weights{0.45, 0.40, 0.15, 0, 0, 0}
 	case "voice":
 		return weights{0.45, 0.40, 0.15, 0, 0, 0}
+	case "tts":
+		return weights{0.60, 0.25, 0.15, 0, 0, 0}
 	case "embedding":
 		return weights{0.55, 0.15, 0.30, 0, 0, 0}
 	default: // chat
@@ -133,14 +164,21 @@ func quality(m *Model, category, quant string) float64 {
 	return max(0, q-quantPenalty(quant))
 }
 
-// Evaluate scores one quant file of a model for a category.
+// Evaluate scores one quant file of a model for a category (estimates only).
 func Evaluate(m *Model, f File, category string, hw hardware.Info, contextSize int) Fit {
+	return EvaluateWith(m, f, category, hw, contextSize, nil)
+}
+
+// EvaluateWith scores a model, refining the speed estimate with cal when given.
+func EvaluateWith(m *Model, f File, category string, hw hardware.Info, contextSize int, cal Calibrator) Fit {
 	var fit Fit
 	switch m.Runtime {
 	case RuntimeWhisper:
 		fit = evaluateWhisper(m, f, hw)
 	case RuntimeDiffusion:
 		fit = evaluateDiffusion(m, f, hw)
+	case RuntimePiper:
+		fit = evaluateTTS(f, hw)
 	default:
 		fit = evaluateLLM(m, f, category, hw, contextSize)
 	}
@@ -148,6 +186,20 @@ func Evaluate(m *Model, f File, category string, hw hardware.Info, contextSize i
 	fit.DownloadBytes = f.Size + m.extrasSize()
 	fit.Label = LevelLabel(fit.Level)
 	fit.QualityScore = quality(m, category, f.Quant)
+	if kind := KindOf(m, category); cal != nil && kind != "embedding" {
+		if c, ok := cal(m.ID, f.Quant, kind, fit.Mode); ok && c.Ratio > 0 {
+			switch kind {
+			case "llm":
+				fit.TPS *= c.Ratio
+			case "voice", "tts":
+				fit.RealtimeFactor *= c.Ratio
+			case "image":
+				fit.SecondsPerImage *= c.Ratio
+			}
+			fit.Measured, fit.Calibrated, fit.Samples = c.Measured, !c.Measured, c.Samples
+			setSpeed(&fit, kind, category)
+		}
+	}
 	fit.FitScore = fitScoreFor(fit.Utilization)
 
 	w := weightsFor(category)
@@ -210,14 +262,31 @@ func evaluateLLM(m *Model, f File, category string, hw hardware.Info, contextSiz
 		fit.SpeedLabel = label(m.ParamsB, [3]float64{0.3, 1, 3}, true)
 		fit.TPS = 0
 	} else {
-		fit.SpeedScore = 100 * (1 - math.Exp(-fit.TPS/w.targetTPS))
-		fit.SpeedLabel = label(fit.TPS, [3]float64{40, 20, 8}, false)
+		setSpeed(&fit, "llm", category)
 	}
 	fit.ContextScore = 100
 	if w.targetContext > 0 {
 		fit.ContextScore = min(1, float64(m.Context)/float64(w.targetContext)) * 100
 	}
 	return fit
+}
+
+// setSpeed derives the speed score and label from the speed metric of kind.
+func setSpeed(fit *Fit, kind, category string) {
+	switch kind {
+	case "voice":
+		fit.SpeedScore = 100 * math.Exp(-fit.RealtimeFactor/3)
+		fit.SpeedLabel = label(fit.RealtimeFactor, [3]float64{0.5, 1, 3}, true)
+	case "tts":
+		fit.SpeedScore = 100 * math.Exp(-fit.RealtimeFactor/0.5)
+		fit.SpeedLabel = label(fit.RealtimeFactor, [3]float64{0.2, 0.5, 1}, true)
+	case "image":
+		fit.SpeedScore = 100 * math.Exp(-fit.SecondsPerImage/30)
+		fit.SpeedLabel = label(fit.SecondsPerImage, [3]float64{10, 30, 90}, true)
+	default:
+		fit.SpeedScore = 100 * (1 - math.Exp(-fit.TPS/weightsFor(category).targetTPS))
+		fit.SpeedLabel = label(fit.TPS, [3]float64{40, 20, 8}, false)
+	}
 }
 
 func utilization(required, pool float64) float64 {
@@ -239,18 +308,27 @@ func cpuFactor(hw hardware.Info) (factor float64, mode string) {
 	return 45 / bw, "CPU"
 }
 
-// whisperfile runs on the CPU (Metal on Apple Silicon).
+// toolFactor is cpuFactor for whisperfile/diffusionfile, which only use the
+// GPU when the installed build ships a GPU backend (detected from its logs).
+func toolFactor(hw hardware.Info, gpu bool, requiredGB float64) (factor float64, mode string, pool float64) {
+	if gpu && !hw.UnifiedMemory && hw.GPUBandwidthGBps > 0 && requiredGB <= hw.UsableVRAMGB {
+		return 45 / hw.GPUBandwidthGBps, "GPU", hw.UsableVRAMGB
+	}
+	factor, mode = cpuFactor(hw)
+	return factor, mode, hw.UsableRAMGB
+}
+
+// whisperfile runs on the CPU (Metal on Apple Silicon) unless its build has a GPU backend.
 func evaluateWhisper(m *Model, f File, hw hardware.Info) Fit {
 	weightsGB := float64(f.Size) / hardware.GiB
-	factor, mode := cpuFactor(hw)
 	required := weightsGB*1.3 + 0.2
+	factor, mode, pool := toolFactor(hw, hw.WhisperGPU, required)
 	fit := Fit{Mode: mode, RequiredGB: required}
-	fit.Utilization = utilization(required, hw.UsableRAMGB)
+	fit.Utilization = utilization(required, pool)
 	fit.Level = levelFor(fit.Utilization)
 	// Calibrated: whisper base (74M) ≈ 2× realtime on the reference CPU.
 	fit.RealtimeFactor = m.ParamsB * 27 * factor
-	fit.SpeedScore = 100 * math.Exp(-fit.RealtimeFactor/3)
-	fit.SpeedLabel = label(fit.RealtimeFactor, [3]float64{0.5, 1, 3}, true)
+	setSpeed(&fit, "voice", "voice")
 	fit.ContextScore = 100
 	return fit
 }
@@ -263,7 +341,8 @@ func EstimateImageSeconds(m *Model, f File, hw hardware.Info, width, height, ste
 	if spec == nil {
 		return 0
 	}
-	factor, _ := cpuFactor(hw)
+	totalGB := float64(f.Size+m.extrasSize()) / hardware.GiB
+	factor, _, _ := toolFactor(hw, hw.DiffusionGPU, totalGB*1.1+1.8)
 	px := float64(width*height) / (512 * 512)
 	perStep := spec.DiffusionParamsB * 11.6 * px * factor
 	decode := 48 * px * max(spec.VAECost, 1) * factor
@@ -271,7 +350,6 @@ func EstimateImageSeconds(m *Model, f File, hw hardware.Info, width, height, ste
 		decode = 3.2 * px * factor
 	}
 	encode := 0.5
-	totalGB := float64(f.Size+m.extrasSize()) / hardware.GiB
 	for _, c := range m.Components {
 		if c.Role == "llm" || c.Role == "t5xxl" {
 			encode += float64(c.Size) / hardware.GiB * 2 * factor
@@ -281,10 +359,9 @@ func EstimateImageSeconds(m *Model, f File, hw hardware.Info, width, height, ste
 	return float64(steps)*perStep + decode + encode + load
 }
 
-// diffusionfile runs on the CPU (Metal on Apple Silicon).
+// diffusionfile runs on the CPU (Metal on Apple Silicon) unless its build has a GPU backend.
 func evaluateDiffusion(m *Model, f File, hw hardware.Info) Fit {
 	spec := m.Image
-	_, mode := cpuFactor(hw)
 	totalGB := float64(f.Size+m.extrasSize()) / hardware.GiB
 	px := 1.0
 	steps := 20
@@ -293,14 +370,14 @@ func evaluateDiffusion(m *Model, f File, hw hardware.Info) Fit {
 		steps = spec.Steps
 	}
 	required := totalGB*1.1 + 0.6*px + 1.2*px // weights + UNet/DiT buffers + VAE buffers
+	_, mode, pool := toolFactor(hw, hw.DiffusionGPU, required)
 	fit := Fit{Mode: mode, RequiredGB: required}
-	fit.Utilization = utilization(required, hw.UsableRAMGB)
+	fit.Utilization = utilization(required, pool)
 	fit.Level = levelFor(fit.Utilization)
 	if spec != nil {
 		fit.SecondsPerImage = EstimateImageSeconds(m, f, hw, spec.Width, spec.Height, steps, hasRole(m, "taesd"))
 	}
-	fit.SpeedScore = 100 * math.Exp(-fit.SecondsPerImage/30)
-	fit.SpeedLabel = label(fit.SecondsPerImage, [3]float64{10, 30, 90}, true)
+	setSpeed(&fit, "image", "image")
 	fit.ContextScore = 100
 	return fit
 }
@@ -317,10 +394,15 @@ func hasRole(m *Model, role string) bool {
 // EvaluateBest picks the quant with the best score that fits, falling back to
 // the smallest file when nothing fits.
 func EvaluateBest(m *Model, category string, hw hardware.Info, contextSize int) Fit {
+	return EvaluateBestWith(m, category, hw, contextSize, nil)
+}
+
+// EvaluateBestWith is EvaluateBest with measured speeds applied.
+func EvaluateBestWith(m *Model, category string, hw hardware.Info, contextSize int, cal Calibrator) Fit {
 	var best, smallest *Fit
 	var smallestSize int64 = math.MaxInt64
 	for _, f := range m.Files {
-		r := Evaluate(m, f, category, hw, contextSize)
+		r := EvaluateWith(m, f, category, hw, contextSize, cal)
 		if r.Level != "tight" && (best == nil || r.Score > best.Score) {
 			best = &r
 		}
@@ -336,4 +418,21 @@ func EvaluateBest(m *Model, category string, hw hardware.Info, contextSize int) 
 		return *smallest
 	}
 	return Fit{Level: "tight", Label: LevelLabel("tight"), Category: category}
+}
+
+// evaluateTTS estimates a Piper voice (ONNX Runtime on the CPU).
+// Calibrated: a "medium" voice (63 MB) ≈ 0.15× realtime on the reference CPU.
+func evaluateTTS(f File, hw hardware.Info) Fit {
+	sizeGB := float64(f.Size) / hardware.GiB
+	required := sizeGB*3 + 0.15
+	factor, mode := cpuFactor(hw)
+	if mode == "Metal" {
+		mode = "CPU" // ONNX Runtime does not use the Apple GPU here
+	}
+	fit := Fit{Mode: mode, RequiredGB: required, RealtimeFactor: sizeGB * 2.6 * factor}
+	fit.Utilization = utilization(required, hw.UsableRAMGB)
+	fit.Level = levelFor(fit.Utilization)
+	setSpeed(&fit, "tts", "tts")
+	fit.ContextScore = 100
+	return fit
 }

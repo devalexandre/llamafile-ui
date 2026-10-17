@@ -32,6 +32,9 @@ type Info struct {
 	UsableRAMGB      float64 `json:"usableRamGb"`
 	UsableVRAMGB     float64 `json:"usableVramGb"`
 	Tier             string  `json:"tier"`
+	// GPU backends detected in the installed whisperfile / diffusionfile builds.
+	WhisperGPU   bool `json:"whisperGpu"`
+	DiffusionGPU bool `json:"diffusionGpu"`
 }
 
 type bw struct {

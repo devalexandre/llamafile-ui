@@ -2,6 +2,8 @@
 import { Browser } from "@wailsio/runtime";
 import * as App from "../../bindings/github.com/devalexandre/llamafile-ui/app";
 import type {
+  BenchRecord,
+  BenchResult,
   Category,
   Collection,
   Conversation,
@@ -47,10 +49,23 @@ export const api = {
   downloadModel: (id: string, quant = "") => App.DownloadModel(id, quant),
   cancelDownload: (key: string) => App.CancelDownload(key),
   removeModel: (id: string) => App.RemoveModel(id),
+  speak: (id: string, text: string) => App.Speak(id, text),
+  stopSpeaking: () => App.StopSpeaking(),
+  speakingId: () => call<string>(App.SpeakingID()),
+  previewVoice: (id: string) => App.PreviewVoice(id),
+  pickChatFiles: () => call<string[]>(App.PickChatFiles()),
+  attachFiles: (paths: string[]) => call<string[]>(App.AttachFiles(paths)),
+  transcribeForChat: (path: string) => call<string>(App.TranscribeForChat(path)),
+  generateChatImage: (conversationId: string, modelId: string, text: string, reference = "") =>
+    call<Conversation>(App.GenerateChatImage(conversationId, modelId, text, reference)),
+  benchmarkModel: (id: string) => call<BenchResult>(App.BenchmarkModel(id)),
+  benchmarks: () => call<BenchRecord[]>(App.GetBenchmarks()),
+  resetBenchmarks: () => App.ResetBenchmarks(),
 
   // tools & runtime
   tools: () => call<ToolStatus[]>(App.GetTools()),
   downloadTool: (tool: string, thin = false) => App.DownloadTool(tool, thin),
+  detectToolGPU: () => call<ToolStatus[]>(App.DetectToolGPU()),
   runtime: () => call<RuntimeStatus>(App.GetRuntimeStatus()),
   embedder: () => call<RuntimeStatus>(App.GetEmbedderStatus()),
   detectLlamafile: () => call<RuntimeStatus>(App.DetectLlamafile()),

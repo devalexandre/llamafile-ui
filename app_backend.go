@@ -141,5 +141,13 @@ func (a *backend) Estimate(req imagegen.Request) float64 {
 		f = m.Files[0]
 	}
 	_, hasTAESD := a.catalog.ComponentPaths(req.ModelID)["taesd"]
-	return catalog.EstimateImageSeconds(m, f, a.hardware(), req.Width, req.Height, req.Steps, req.FastDecode && hasTAESD)
+	if req.InitImage != "" {
+		// img2img only runs steps × strength denoising steps.
+		r := req
+		r.InitImage = a.referencePath(r.InitImage)
+		if imagegen.PrepareImg2Img(&r) == nil {
+			req.Width, req.Height, req.Steps = r.Width, r.Height, max(1, int(float64(r.Steps)*r.Strength+0.5))
+		}
+	}
+	return a.calibratedImageSeconds(m, f, catalog.EstimateImageSeconds(m, f, a.fitHardware(), req.Width, req.Height, req.Steps, req.FastDecode && hasTAESD))
 }

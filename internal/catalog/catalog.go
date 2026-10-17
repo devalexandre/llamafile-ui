@@ -22,6 +22,7 @@ const (
 	RuntimeLlamafile = "llamafile"
 	RuntimeWhisper   = "whisperfile"
 	RuntimeDiffusion = "diffusionfile"
+	RuntimePiper     = "piper"
 )
 
 type File struct {
@@ -43,6 +44,11 @@ type ImageSpec struct {
 	DiffusionParamsB float64  `json:"diffusion_params_b"`
 	VAECost          float64  `json:"vae_cost"` // relative VAE decode cost (SD=1)
 	Args             []string `json:"args,omitempty"`
+}
+
+// TTSSpec describes a Piper voice.
+type TTSSpec struct {
+	Language string `json:"language"` // BCP 47, e.g. "pt-BR"
 }
 
 // EmbedSpec holds the prefixes some embedding models expect.
@@ -71,6 +77,7 @@ type Model struct {
 	Components    []File             `json:"components,omitempty"`
 	Image         *ImageSpec         `json:"image,omitempty"`
 	Embed         *EmbedSpec         `json:"embed,omitempty"`
+	TTS           *TTSSpec           `json:"tts,omitempty"`
 }
 
 // HasCategory reports whether the model belongs to category.
@@ -121,12 +128,17 @@ var Categories = []Category{
 	{"image", "Imagens", "Geram imagens a partir de texto"},
 	{"voice", "Voz", "Transcrição de áudio com Whisper"},
 	{"embedding", "Embeddings", "Busca semântica nos seus documentos"},
+	{"tts", "Leitura em voz alta", "Vozes para ouvir as respostas do chat (Piper)"},
 }
 
 type Catalog struct {
 	models    []Model
 	modelsDir func() string
+	cal       Calibrator
 }
+
+// SetCalibrator applies speeds measured on this machine to every evaluation.
+func (c *Catalog) SetCalibrator(cal Calibrator) { c.cal = cal }
 
 func New(modelsDir func() string) (*Catalog, error) {
 	var doc struct {
@@ -226,9 +238,9 @@ func (c *Catalog) view(m *Model, category string, hw hardware.Info, ctx int) Vie
 		v.Installed = true
 		v.InstalledQuant = f.Quant
 		v.InstalledBytes = f.Size + m.extrasSize()
-		v.Fit = Evaluate(m, f, category, hw, ctx)
+		v.Fit = EvaluateWith(m, f, category, hw, ctx, c.cal)
 	} else {
-		v.Fit = EvaluateBest(m, category, hw, ctx)
+		v.Fit = EvaluateBestWith(m, category, hw, ctx, c.cal)
 	}
 	return v
 }
@@ -343,7 +355,7 @@ func (c *Catalog) DownloadPlan(id, quant string, hw hardware.Info, ctx int) (*Mo
 		return nil, nil, fmt.Errorf("modelo %q não encontrado no catálogo", id)
 	}
 	if quant == "" {
-		quant = EvaluateBest(m, primaryCategory(m), hw, ctx).Quant
+		quant = EvaluateBestWith(m, primaryCategory(m), hw, ctx, c.cal).Quant
 	}
 	var files []File
 	for _, f := range m.Files {

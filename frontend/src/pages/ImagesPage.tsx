@@ -5,6 +5,7 @@ import {
   Dices,
   Download,
   ImagePlus,
+  ImageUp,
   Loader2,
   MessageSquare,
   RotateCcw,
@@ -17,7 +18,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ModelGate, ModelSelect, ToolGate } from "../components/Gates";
 import { Button, EmptyState, IconButton, Progress, Segmented, Sheet, Switch } from "../components/ui";
-import { api, imageURL, on } from "../lib/api";
+import { api, attachmentURL, imageURL, on, onFileDrop } from "../lib/api";
 import { duration } from "../lib/format";
 import { errorText, useApp } from "../lib/store";
 import type { ImageDefaults, ImageItem, ImageProgress, ImageRequest } from "../lib/types";
@@ -28,7 +29,7 @@ const sizes = [
   { value: "landscape", label: "Paisagem", w: 3, h: 2 },
 ] as const;
 
-const phaseLabel: Record<ImageProgress["phase"], string> = {
+export const phaseLabel: Record<ImageProgress["phase"], string> = {
   loading: "Carregando o modelo…",
   encoding: "Entendendo o prompt…",
   sampling: "Gerando a imagem…",
@@ -49,7 +50,17 @@ function dims(shape: string, base: number) {
   return { width: Math.round((s.w * scale) / 64) * 64, height: Math.round((s.h * scale) / 64) * 64 };
 }
 
-function Lightbox({ img, onClose, onReuse }: { img: ImageItem; onClose: () => void; onReuse: (img: ImageItem) => void }) {
+function Lightbox({
+  img,
+  onClose,
+  onReuse,
+  onReference,
+}: {
+  img: ImageItem;
+  onClose: () => void;
+  onReuse: (img: ImageItem) => void;
+  onReference: (img: ImageItem) => void;
+}) {
   const app = useApp();
   const act = (fn: () => Promise<unknown>) => fn().catch((e) => app.toast(errorText(e), "error"));
   return (
@@ -81,9 +92,18 @@ function Lightbox({ img, onClose, onReuse }: { img: ImageItem; onClose: () => vo
             <dt className="text-muted">Tempo</dt>
             <dd>{duration(img.durationMs / 1000)}</dd>
           </dl>
+          {img.reference && (
+            <div className="mt-3">
+              <div className="mb-1 text-[12px] text-muted">Feita a partir de (intensidade {Math.round(img.strength * 100)}%)</div>
+              <img src={imageURL(img.reference)} className="max-h-24 rounded-md border border-line object-contain" />
+            </div>
+          )}
           <div className="mt-auto flex flex-wrap gap-2 pt-4">
             <Button size="sm" icon={<RotateCcw className="size-3.5" />} onClick={() => onReuse(img)}>
               Reutilizar
+            </Button>
+            <Button size="sm" icon={<ImageUp className="size-3.5" />} onClick={() => onReference(img)}>
+              Usar como referência
             </Button>
             <Button
               size="sm"
@@ -157,6 +177,23 @@ function Generator() {
   const [progress, setProgress] = useState<ImageProgress | null>(null);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [open, setOpen] = useState<ImageItem | null>(null);
+  // Reference image (img2img): an attachment name and how much it may change.
+  const [reference, setReference] = useState("");
+  const [strength, setStrength] = useState(0.6);
+  useEffect(
+    () =>
+      onFileDrop(async (paths) => {
+        const img = paths.find((p) => /\.(png|jpe?g|webp|gif)$/i.test(p));
+        if (!img) return app.toast("Arraste uma imagem PNG, JPG, WebP ou GIF.");
+        try {
+          const [name] = await api.attachFiles([img]);
+          if (name) setReference(name);
+        } catch (e) {
+          app.toast(errorText(e), "error");
+        }
+      }),
+    [app],
+  );
 
   const model = models.find((m) => m.id === modelId);
   const size = dims(shape, base);
@@ -183,8 +220,20 @@ function Generator() {
   }, [modelId]);
 
   const request = useMemo<ImageRequest>(
-    () => ({ modelId, prompt, negative, ...size, steps, cfg, seed, sampler: defaults?.sampler ?? "", fastDecode }),
-    [modelId, prompt, negative, size.width, size.height, steps, cfg, seed, defaults?.sampler, fastDecode], // eslint-disable-line react-hooks/exhaustive-deps
+    () => ({
+      modelId,
+      prompt,
+      negative,
+      ...size,
+      steps,
+      cfg,
+      seed,
+      sampler: defaults?.sampler ?? "",
+      fastDecode,
+      initImage: reference,
+      strength: reference ? strength : 0,
+    }),
+    [modelId, prompt, negative, size.width, size.height, steps, cfg, seed, defaults?.sampler, fastDecode, reference, strength], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   useEffect(() => {
@@ -283,6 +332,58 @@ function Generator() {
             </Button>
           </div>
         </div>
+        <div>
+          <div className="mb-1.5 text-[12px] font-semibold text-muted">Imagem de referência (opcional)</div>
+          {reference ? (
+            <div className="rounded-[10px] border border-line bg-card p-2.5">
+              <div className="flex items-start gap-2.5">
+                <img src={attachmentURL(reference)} className="size-16 rounded-md border border-line object-cover" />
+                <div className="min-w-0 flex-1 text-[11.5px] text-muted">
+                  O modelo vai alterar esta imagem seguindo a descrição, mantendo a composição e a proporção.
+                </div>
+                <IconButton title="Remover referência" onClick={() => setReference("")}>
+                  <X className="size-4" />
+                </IconButton>
+              </div>
+              <label className="mt-2 flex items-center gap-2 text-[12px]">
+                <span className="w-20 text-muted">Intensidade</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  value={strength}
+                  onChange={(e) => setStrength(Number(e.target.value))}
+                  className="flex-1 accent-[var(--accent)]"
+                />
+                <span className="w-9 text-right tabular-nums">{Math.round(strength * 100)}%</span>
+              </label>
+              <p className="mt-1 text-[11px] text-faint">Baixa: pequenos ajustes. Alta: muda quase tudo.</p>
+            </div>
+          ) : (
+            <div
+              data-file-drop-target
+              className="flex items-center gap-2 rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[12px] text-muted [&.file-drop-target-active]:border-accent [&.file-drop-target-active]:bg-accent-soft"
+            >
+              <ImageUp className="size-4 shrink-0" />
+              <span className="flex-1">Arraste uma imagem ou</span>
+              <Button
+                size="sm"
+                variant="plain"
+                onClick={async () => {
+                  try {
+                    const names = await api.pickImages();
+                    if (names?.[0]) setReference(names[0]);
+                  } catch (e) {
+                    app.toast(errorText(e), "error");
+                  }
+                }}
+              >
+                Escolher…
+              </Button>
+            </div>
+          )}
+        </div>
         {defaults?.negative && (
           <div>
             <div className="mb-1.5 text-[12px] font-semibold text-muted">Evitar (prompt negativo)</div>
@@ -294,7 +395,7 @@ function Generator() {
             />
           </div>
         )}
-        <div>
+        <div className={clsx(reference && "hidden")}>
           <div className="mb-1.5 text-[12px] font-semibold text-muted">Formato</div>
           <Segmented value={shape} onChange={setShape} options={sizes.map((s) => ({ value: s.value, label: s.label }))} />
           <div className="mt-2 flex items-center gap-2 text-[12px] text-muted">
@@ -388,7 +489,7 @@ function Generator() {
           ) : (
             <>
               <Button variant="primary" className="w-full" icon={<Wand2 className="size-4" />} disabled={!prompt.trim() || !modelId} onClick={generate}>
-                Gerar imagem
+                {reference ? "Transformar imagem" : "Gerar imagem"}
               </Button>
               <p className="mt-1.5 text-center text-[11px] text-muted">
                 {estimate > 0 && `Estimativa: ~${duration(estimate)} neste computador · `}Ctrl+Enter
@@ -424,12 +525,29 @@ function Generator() {
               </div>
             )}
             {images.map((img) => (
-              <button key={img.id} onClick={() => setOpen(img)} className="group relative overflow-hidden rounded-xl border border-line bg-field">
-                <img src={imageURL(img.file)} loading="lazy" className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]" />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2.5 pt-6 pb-2 text-left text-[11.5px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  <div className="line-clamp-2">{img.prompt}</div>
-                </div>
-              </button>
+              <div key={img.id} className="group relative overflow-hidden rounded-xl border border-line bg-field">
+                <button onClick={() => setOpen(img)} className="block w-full">
+                  <img src={imageURL(img.file)} loading="lazy" className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]" />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2.5 pt-6 pb-2 text-left text-[11.5px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+                    <div className="line-clamp-2">{img.prompt}</div>
+                  </div>
+                </button>
+                <button
+                  title="Excluir imagem"
+                  onClick={async () => {
+                    if (!confirm("Excluir esta imagem?")) return;
+                    try {
+                      await api.deleteImage(img.id);
+                      loadImages();
+                    } catch (e) {
+                      app.toast(errorText(e), "error");
+                    }
+                  }}
+                  className="absolute top-2 right-2 rounded-md bg-black/55 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-bad"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -443,6 +561,14 @@ function Generator() {
             loadImages();
           }}
           onReuse={reuse}
+          onReference={async (img) => {
+            try {
+              setReference(await api.imageToAttachment(img.id));
+              setOpen(null);
+            } catch (e) {
+              app.toast(errorText(e), "error");
+            }
+          }}
         />
       )}
     </div>

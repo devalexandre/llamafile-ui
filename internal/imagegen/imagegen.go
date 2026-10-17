@@ -34,6 +34,9 @@ type Request struct {
 	Seed       int64   `json:"seed"` // < 0 = random
 	Sampler    string  `json:"sampler"`
 	FastDecode bool    `json:"fastDecode"` // use TAESD when available
+	// InitImage is a reference image to transform (img2img); empty = text-to-image.
+	InitImage string  `json:"initImage"`
+	Strength  float64 `json:"strength"` // how much the reference may change (0..1)
 }
 
 type Image struct {
@@ -51,6 +54,8 @@ type Image struct {
 	File       string  `json:"file"`
 	DurationMs int64   `json:"durationMs"`
 	CreatedAt  int64   `json:"createdAt"`
+	Reference  string  `json:"reference"` // copy of the reference image (img2img), if any
+	Strength   float64 `json:"strength"`
 }
 
 type Progress struct {
@@ -116,6 +121,9 @@ func New(db *sql.DB, dir string, backend Backend, events Events) (*Generator, er
 	if _, err := db.Exec(schema); err != nil {
 		return nil, fmt.Errorf("images db: %w", err)
 	}
+	// Columns added after the first release (errors mean they already exist).
+	_, _ = db.Exec(`ALTER TABLE images ADD COLUMN reference TEXT NOT NULL DEFAULT ''`)
+	_, _ = db.Exec(`ALTER TABLE images ADD COLUMN strength REAL NOT NULL DEFAULT 0`)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
 	}
@@ -149,6 +157,11 @@ func (g *Generator) Generate(req Request) (string, error) {
 	req.Width, req.Height = req.Width/64*64, req.Height/64*64
 	if req.Steps <= 0 {
 		req.Steps = 20
+	}
+	if req.InitImage != "" {
+		if err := PrepareImg2Img(&req); err != nil {
+			return "", err
+		}
 	}
 	if req.Seed < 0 {
 		req.Seed = rand.Int64N(1 << 31)
@@ -220,6 +233,15 @@ func (g *Generator) run(ctx context.Context, jobID, bin string, spec ModelSpec, 
 		"-s", strconv.FormatInt(req.Seed, 10), "-o", out, "-t", strconv.Itoa(tools.Threads())}
 	if req.Negative != "" {
 		args = append(args, "-n", req.Negative)
+	}
+	reference := ""
+	if req.InitImage != "" {
+		args = append(args, "-i", req.InitImage, "--strength", strconv.FormatFloat(req.Strength, 'f', 2, 64))
+		// Keep a copy so the gallery can show what the image came from.
+		reference = "ref-" + uuid.NewString() + strings.ToLower(filepath.Ext(req.InitImage))
+		if err := copyFile(req.InitImage, filepath.Join(g.dir, reference)); err != nil {
+			reference = ""
+		}
 	}
 	if req.Sampler != "" {
 		args = append(args, "--sampling-method", req.Sampler)
@@ -302,10 +324,13 @@ func (g *Generator) run(ctx context.Context, jobID, bin string, spec ModelSpec, 
 
 	img := Image{Prompt: req.Prompt, Negative: req.Negative, ModelID: req.ModelID, ModelName: spec.Name,
 		Width: req.Width, Height: req.Height, Steps: req.Steps, CFG: req.CFG, Seed: req.Seed, Sampler: req.Sampler,
-		File: name, DurationMs: time.Since(started).Milliseconds(), CreatedAt: time.Now().UnixMilli()}
-	res, err := g.db.Exec(`INSERT INTO images (prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, img.Prompt, img.Negative, img.ModelID, img.ModelName, img.Width, img.Height,
-		img.Steps, img.CFG, img.Seed, img.Sampler, img.File, img.DurationMs, img.CreatedAt)
+		File: name, DurationMs: time.Since(started).Milliseconds(), CreatedAt: time.Now().UnixMilli(), Reference: reference}
+	if reference != "" {
+		img.Strength = req.Strength
+	}
+	res, err := g.db.Exec(`INSERT INTO images (prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at, reference, strength)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, img.Prompt, img.Negative, img.ModelID, img.ModelName, img.Width, img.Height,
+		img.Steps, img.CFG, img.Seed, img.Sampler, img.File, img.DurationMs, img.CreatedAt, img.Reference, img.Strength)
 	if err != nil {
 		return img, err
 	}
@@ -326,7 +351,7 @@ func lastError(lines []string) string {
 }
 
 func (g *Generator) List() ([]Image, error) {
-	rows, err := g.db.Query(`SELECT id, prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at
+	rows, err := g.db.Query(`SELECT id, prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at, reference, strength
 FROM images ORDER BY id DESC`)
 	if err != nil {
 		return nil, err
@@ -336,7 +361,7 @@ FROM images ORDER BY id DESC`)
 	for rows.Next() {
 		var i Image
 		if err := rows.Scan(&i.ID, &i.Prompt, &i.Negative, &i.ModelID, &i.ModelName, &i.Width, &i.Height, &i.Steps,
-			&i.CFG, &i.Seed, &i.Sampler, &i.File, &i.DurationMs, &i.CreatedAt); err != nil {
+			&i.CFG, &i.Seed, &i.Sampler, &i.File, &i.DurationMs, &i.CreatedAt, &i.Reference, &i.Strength); err != nil {
 			return nil, err
 		}
 		out = append(out, i)
@@ -346,9 +371,9 @@ FROM images ORDER BY id DESC`)
 
 func (g *Generator) Get(id int64) (Image, error) {
 	var i Image
-	err := g.db.QueryRow(`SELECT id, prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at
+	err := g.db.QueryRow(`SELECT id, prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at, reference, strength
 FROM images WHERE id = ?`, id).Scan(&i.ID, &i.Prompt, &i.Negative, &i.ModelID, &i.ModelName, &i.Width, &i.Height, &i.Steps,
-		&i.CFG, &i.Seed, &i.Sampler, &i.File, &i.DurationMs, &i.CreatedAt)
+		&i.CFG, &i.Seed, &i.Sampler, &i.File, &i.DurationMs, &i.CreatedAt, &i.Reference, &i.Strength)
 	return i, err
 }
 
@@ -360,6 +385,9 @@ func (g *Generator) Delete(id int64) error {
 		return err
 	}
 	_ = os.Remove(g.Path(img.File))
+	if img.Reference != "" {
+		_ = os.Remove(g.Path(img.Reference))
+	}
 	_, err = g.db.Exec(`DELETE FROM images WHERE id = ?`, id)
 	return err
 }

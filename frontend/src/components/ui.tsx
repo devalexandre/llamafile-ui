@@ -210,7 +210,10 @@ export function Menu({
   trigger,
   items,
   align = "right",
+  side = "bottom",
 }: {
+  /** Open above the trigger (e.g. menus in the chat composer). */
+  side?: "top" | "bottom";
   trigger: (open: () => void) => ReactNode;
   items: ({ label: string; icon?: ReactNode; danger?: boolean; onClick: () => void } | "separator")[];
   align?: "left" | "right";
@@ -231,8 +234,9 @@ export function Menu({
       {open && (
         <div
           className={clsx(
-            "absolute z-50 mt-1 min-w-[190px] rounded-[10px] border border-line bg-elevated/95 p-1 shadow-xl backdrop-blur-xl",
+            "absolute z-50 min-w-[190px] rounded-[10px] border border-line bg-elevated/95 p-1 shadow-xl backdrop-blur-xl",
             align === "right" ? "right-0" : "left-0",
+            side === "top" ? "bottom-full mb-1" : "mt-1",
           )}
         >
           {items.map((it, i) =>

@@ -3,6 +3,7 @@ package voice
 import (
 	"bufio"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -119,4 +120,34 @@ func cleanText(s string) string {
 		parts = append(parts, line)
 	}
 	return strings.Join(parts, " ")
+}
+
+var srtEndRe = regexp.MustCompile(`--> (\d+):(\d+):(\d+)[,.](\d+)`)
+
+// AudioSeconds returns the length of an audio file: from the WAV header when
+// possible, otherwise from the last subtitle timestamp (0 if unknown).
+func AudioSeconds(path, srt string) float64 {
+	if strings.EqualFold(filepath.Ext(path), ".wav") {
+		if f, err := os.Open(path); err == nil {
+			defer f.Close()
+			hdr := make([]byte, 44)
+			if _, err := io.ReadFull(f, hdr); err == nil && string(hdr[0:4]) == "RIFF" && string(hdr[36:40]) == "data" {
+				byteRate := binary.LittleEndian.Uint32(hdr[28:32])
+				size := binary.LittleEndian.Uint32(hdr[40:44])
+				if byteRate > 0 {
+					return float64(size) / float64(byteRate)
+				}
+			}
+		}
+	}
+	m := srtEndRe.FindAllStringSubmatch(srt, -1)
+	if len(m) == 0 {
+		return 0
+	}
+	last := m[len(m)-1]
+	h, _ := strconv.Atoi(last[1])
+	mi, _ := strconv.Atoi(last[2])
+	s, _ := strconv.Atoi(last[3])
+	ms, _ := strconv.Atoi(last[4])
+	return float64(h*3600+mi*60+s) + float64(ms)/1000
 }

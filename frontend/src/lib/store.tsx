@@ -51,6 +51,7 @@ interface AppState {
   /** Installed models usable in the chat. */
   chatModels: ModelView[];
   voiceModels: ModelView[];
+  ttsModels: ModelView[];
   imageModels: ModelView[];
   embedModels: ModelView[];
   toast: (text: string, kind?: Toast["kind"]) => void;
@@ -212,6 +213,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const chatModels = useMemo(() => by((m) => m.runtime === "llamafile" && !m.categories.includes("embedding")), [by]);
   const voiceModels = useMemo(() => by((m) => m.categories.includes("voice"), settings?.voiceModelId), [by, settings?.voiceModelId]);
+  const ttsModels = useMemo(() => by((m) => m.categories.includes("tts"), settings?.ttsVoiceId), [by, settings?.ttsVoiceId]);
   const imageModels = useMemo(() => by((m) => m.categories.includes("image"), settings?.imageModelId), [by, settings?.imageModelId]);
   const embedModels = useMemo(() => by((m) => m.categories.includes("embedding"), settings?.embedModelId), [by, settings?.embedModelId]);
 
@@ -256,6 +258,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSearch,
     chatModels,
     voiceModels,
+    ttsModels,
     imageModels,
     embedModels,
     toast,

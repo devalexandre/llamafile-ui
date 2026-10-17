@@ -1,5 +1,5 @@
-import { FolderOpen, HardDrive, MessageSquare, Play, Square, Trash2 } from "lucide-react";
-import { DownloadProgress, pageFor, speedText, useModelActions } from "../components/ModelCard";
+import { FolderOpen, Gauge, HardDrive, MessageSquare, Play, Square, Trash2 } from "lucide-react";
+import { DownloadProgress, pageFor, SpeedSource, speedText, useModelActions } from "../components/ModelCard";
 import { Button, EmptyState, FitBadge, StatusDot, Tag } from "../components/ui";
 import { api } from "../lib/api";
 import { bytes, gb } from "../lib/format";
@@ -14,6 +14,7 @@ const categoryLabel: Record<string, string> = {
   voice: "Voz",
   image: "Imagens",
   embedding: "Embeddings",
+  tts: "Leitura em voz alta",
 };
 
 function InstalledRow({ m }: { m: ModelView }) {
@@ -36,11 +37,12 @@ function InstalledRow({ m }: { m: ModelView }) {
         </div>
         <div className="mt-0.5 text-[12px] text-muted">
           {bytes(m.installedBytes)} no disco · precisa de ~{gb(m.fit.requiredGb)} · {m.fit.mode}
-          {` · ${speedText(m)}`}
+          {` · ${speedText(m)} `}
+          <SpeedSource m={m} />
         </div>
       </div>
       <FitBadge level={m.fit.level} label={m.fit.label} />
-      <div className="flex w-[260px] items-center justify-end gap-2">
+      <div className="flex w-[340px] items-center justify-end gap-2">
         {usable ? (
           <>
             {a.active ? (
@@ -52,6 +54,9 @@ function InstalledRow({ m }: { m: ModelView }) {
                 Carregar
               </Button>
             )}
+            <Button size="sm" icon={<Gauge className="size-3.5" />} loading={a.busy} onClick={a.measure} title="Medir a velocidade real neste computador">
+              Medir
+            </Button>
             <Button size="sm" variant="primary" icon={<MessageSquare className="size-3.5" />} onClick={a.chat}>
               Conversar
             </Button>

@@ -219,9 +219,13 @@ func (s *Store) UpdateMessage(m Message) error {
 	if m.Sources == nil {
 		m.Sources = []Source{}
 	}
+	if m.Attachments == nil {
+		m.Attachments = []string{}
+	}
 	src, _ := json.Marshal(m.Sources)
-	_, err := s.db.Exec(`UPDATE messages SET content = ?, reasoning = ?, tps = ?, tokens = ?, error = ?, sources = ? WHERE id = ?`,
-		m.Content, m.Reasoning, m.TPS, m.Tokens, m.Error, string(src), m.ID)
+	att, _ := json.Marshal(m.Attachments)
+	_, err := s.db.Exec(`UPDATE messages SET content = ?, reasoning = ?, tps = ?, tokens = ?, error = ?, sources = ?, attachments = ? WHERE id = ?`,
+		m.Content, m.Reasoning, m.TPS, m.Tokens, m.Error, string(src), string(att), m.ID)
 	return err
 }
 
