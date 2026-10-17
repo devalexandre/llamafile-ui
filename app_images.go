@@ -3,46 +3,13 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/devalexandre/llamafile-ui/internal/catalog"
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
-	"github.com/devalexandre/llamafile-ui/internal/tools"
 )
-
-// ------------------------------------------------ imagegen.Backend interface
-
-func (a *App) Binary() string { return a.toolPath(tools.Diffusion) }
-
-func (a *App) Model(id string) (imagegen.ModelSpec, error) {
-	m := a.catalog.Find(id)
-	if m == nil || m.Image == nil {
-		return imagegen.ModelSpec{}, errors.New("escolha um modelo de imagem")
-	}
-	main := a.catalog.ModelPath(id)
-	if main == "" {
-		return imagegen.ModelSpec{}, fmt.Errorf("%s não está instalado", m.Name)
-	}
-	return imagegen.ModelSpec{Name: m.Name, MainFlag: m.Image.MainFlag, MainPath: main,
-		Components: a.catalog.ComponentPaths(id), Args: m.Image.Args}, nil
-}
-
-func (a *App) Estimate(req imagegen.Request) float64 {
-	m := a.catalog.Find(req.ModelID)
-	if m == nil {
-		return 0
-	}
-	f, ok := a.catalog.InstalledFile(m)
-	if !ok && len(m.Files) > 0 {
-		f = m.Files[0]
-	}
-	_, hasTAESD := a.catalog.ComponentPaths(req.ModelID)["taesd"]
-	return catalog.EstimateImageSeconds(m, f, a.hardware(), req.Width, req.Height, req.Steps, req.FastDecode && hasTAESD)
-}
 
 // ------------------------------------------------------------------ images
 
@@ -67,7 +34,7 @@ func (a *App) GetImageDefaults(modelID string) (ImageDefaults, error) {
 		Sampler: m.Image.Sampler, Negative: m.Image.CFG > 1, TAESD: taesd}, nil
 }
 
-func (a *App) EstimateImage(req imagegen.Request) float64 { return a.Estimate(req) }
+func (a *App) EstimateImage(req imagegen.Request) float64 { return (&backend{a}).Estimate(req) }
 
 func (a *App) GenerateImage(req imagegen.Request) (string, error) {
 	if req.ModelID == "" {

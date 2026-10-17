@@ -10,11 +10,12 @@ import (
 	"sync"
 	"time"
 
-	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"github.com/devalexandre/llamafile-ui/internal/catalog"
 	"github.com/devalexandre/llamafile-ui/internal/chat"
 	"github.com/devalexandre/llamafile-ui/internal/downloads"
+	"github.com/devalexandre/llamafile-ui/internal/eventbus"
 	"github.com/devalexandre/llamafile-ui/internal/hardware"
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
@@ -27,10 +28,15 @@ import (
 
 const modelKeyPrefix = "model:"
 
-// App is bound to the frontend: every exported method is callable from React.
-// Methods are grouped by feature in app_*.go files.
+// App is the Wails service bound to the frontend: every exported method is
+// callable from React. Methods are grouped by feature in app_*.go files; the
+// interfaces used by internal packages are implemented by [backend] so they
+// are not exposed to JavaScript.
 type App struct {
 	ctx       context.Context
+	window    *application.WebviewWindow
+	bus       *eventbus.Bus
+	onRuntime func(runtime.Status) // tray menu hook
 	settings  *settings.Store
 	catalog   *catalog.Catalog
 	downloads *downloads.Manager
@@ -52,7 +58,7 @@ type App struct {
 }
 
 func NewApp() (*App, error) {
-	a := &App{settings: settings.Load(), downloads: downloads.New(), pendingTools: map[string]string{}}
+	a := &App{settings: settings.Load(), downloads: downloads.New(), pendingTools: map[string]string{}, bus: eventbus.New()}
 	cat, err := catalog.New(func() string { return a.settings.Get().ModelsDir })
 	if err != nil {
 		return nil, err
@@ -65,7 +71,8 @@ func NewApp() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	a.chat = chat.NewService(store, a, chat.Events{
+	be := &backend{a}
+	a.chat = chat.NewService(store, be, chat.Events{
 		Message: func(m chat.Message) { a.emit("chat:message", m) },
 		Delta: func(conv string, id int64, content, reasoning string) {
 			a.emit("chat:delta", map[string]any{"conversationId": conv, "messageId": id, "content": content, "reasoning": reasoning})
@@ -81,13 +88,13 @@ func NewApp() (*App, error) {
 	if a.voice, err = voice.OpenStore(db); err != nil {
 		return nil, err
 	}
-	if a.docs, err = rag.Open(db, a, rag.Events{
+	if a.docs, err = rag.Open(db, be, rag.Events{
 		Document: func(d rag.Document) { a.emit("docs:document", d) },
 		Changed:  func() { a.emit("docs:changed") },
 	}); err != nil {
 		return nil, err
 	}
-	if a.images, err = imagegen.New(db, paths.ImagesDir(), a, imagegen.Events{
+	if a.images, err = imagegen.New(db, paths.ImagesDir(), be, imagegen.Events{
 		Progress: func(p imagegen.Progress) { a.emit("image:progress", p) },
 		Done:     func(job string, img imagegen.Image) { a.emit("image:done", map[string]any{"jobId": job, "image": img}) },
 		Error:    func(job, msg string) { a.emit("image:error", map[string]string{"jobId": job, "error": msg}) },
@@ -100,15 +107,24 @@ func NewApp() (*App, error) {
 	return a, nil
 }
 
+// emit sends an event to the frontend through the long-poll event bus.
 func (a *App) emit(event string, data ...any) {
-	if a.ctx != nil {
-		wruntime.EventsEmit(a.ctx, event, data...)
+	var payload any
+	if len(data) > 0 {
+		payload = data[0]
 	}
+	a.bus.Publish(event, payload)
 }
 
-func (a *App) startup(ctx context.Context) {
+// ServiceStartup is called by Wails when the application starts.
+func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
-	a.runtime.OnChange = func(s runtime.Status) { a.emit("runtime:status", s) }
+	a.runtime.OnChange = func(s runtime.Status) {
+		a.emit("runtime:status", s)
+		if a.onRuntime != nil {
+			a.onRuntime(s)
+		}
+	}
 	a.runtime.OnLog = func(line string) { a.emit("runtime:log", line) }
 	a.embedder.OnChange = func(s runtime.Status) { a.emit("embedder:status", s) }
 	a.downloads.OnChange = func(s []downloads.Status) { a.emit("downloads:progress", s) }
@@ -122,16 +138,18 @@ func (a *App) startup(ctx context.Context) {
 			_ = a.runtime.Start(cfg.LastModelID)
 		}
 	}()
+	return nil
 }
 
-func (a *App) shutdown(context.Context) {
+// ServiceShutdown stops every child process before the app exits.
+func (a *App) ServiceShutdown() error {
 	a.chat.StopAll()
 	a.images.Cancel()
 	a.recorder.Cancel()
 	a.CancelTranscription()
 	a.runtime.Stop()
 	a.embedder.Stop()
-	_ = a.chat.Store().Close()
+	return a.chat.Store().Close()
 }
 
 // ---------------------------------------------------------------- system
@@ -218,10 +236,7 @@ func (a *App) ResetServerSettings() (settings.Settings, error) {
 }
 
 func (a *App) ChooseModelsDir() (string, error) {
-	dir, err := wruntime.OpenDirectoryDialog(a.ctx, wruntime.OpenDialogOptions{
-		Title:            "Escolha a pasta de modelos",
-		DefaultDirectory: a.settings.Get().ModelsDir,
-	})
+	dir, err := a.openDirectory("Escolha a pasta de modelos", a.settings.Get().ModelsDir)
 	if err != nil || dir == "" {
 		return "", err
 	}
@@ -378,7 +393,7 @@ func (a *App) DetectLlamafile() runtime.Status {
 }
 
 func (a *App) ChooseLlamafileBinary() (runtime.Status, error) {
-	path, err := wruntime.OpenFileDialog(a.ctx, wruntime.OpenDialogOptions{Title: "Selecione o executável do llamafile"})
+	path, err := a.openFile("Selecione o executável do llamafile")
 	if err != nil || path == "" {
 		return a.runtime.Status(), err
 	}

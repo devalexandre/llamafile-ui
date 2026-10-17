@@ -28,7 +28,8 @@ type Settings struct {
 	VoiceLanguage string `json:"voiceLanguage"` // auto, pt, en…
 	EmbedModelID  string `json:"embedModelId"`
 	ImageModelID  string `json:"imageModelId"`
-	FastDecode    bool   `json:"fastDecode"` // TAESD for image decoding
+	FastDecode    bool   `json:"fastDecode"`  // TAESD for image decoding
+	CloseToTray   bool   `json:"closeToTray"` // closing the window keeps the app in the system tray
 }
 
 func Defaults() Settings {
@@ -45,6 +46,7 @@ func Defaults() Settings {
 		AutoTitle:     true,
 		VoiceLanguage: "auto",
 		FastDecode:    true,
+		CloseToTray:   true,
 	}
 }
 

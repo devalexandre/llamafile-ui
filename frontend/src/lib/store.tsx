@@ -168,6 +168,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }),
       on("chat:conversations", loadConversations),
       on("docs:changed", loadCollections),
+      // "Nova conversa" in the system tray menu.
+      on("app:new-chat", () => {
+        setChatDraft(null);
+        setConversationId("");
+        setPage("chat");
+      }),
     ];
     return () => offs.forEach((off) => off());
   }, [refreshCatalog, loadConversations, loadCollections, loadTools, toast]);

@@ -1,15 +1,15 @@
 {
 	"fixed": {
-		"file_version": "{{.Info.ProductVersion}}"
+		"file_version": "0.2.0"
 	},
 	"info": {
-		"0000": {
-			"ProductVersion": "{{.Info.ProductVersion}}",
-			"CompanyName": "{{.Info.CompanyName}}",
-			"FileDescription": "{{.Info.ProductName}}",
-			"LegalCopyright": "{{.Info.Copyright}}",
-			"ProductName": "{{.Info.ProductName}}",
-			"Comments": "{{.Info.Comments}}"
+		"0409": {
+			"ProductVersion": "0.2.0",
+			"CompanyName": "devalexandre",
+			"FileDescription": "Chat, imagens, voz e documentos com IA local usando llamafile",
+			"LegalCopyright": "© 2026 devalexandre",
+			"ProductName": "Llamafile UI",
+			"Comments": "Interface desktop para o llamafile da Mozilla AI"
 		}
 	}
 }

@@ -1,5 +1,13 @@
 build/bin
 node_modules
 frontend/dist
-frontend/wailsjs
+frontend/bindings
+.task
+bin
 frontend/package.json.md5
+build/linux/appimage/build
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+build/linux/appimage/llamafile-ui
+build/linux/appimage/llamafile-ui.png
+build/linux/llamafile-ui.desktop
+build/ios

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Llamafile UI
+Comment=Chat, imagens, voz e documentos com IA local usando llamafile
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/llamafile-ui %u
+Terminal=false
+Type=Application
+Icon=llamafile-ui
+Categories=Utility;
+StartupWMClass=llamafile-ui
+
+ 
