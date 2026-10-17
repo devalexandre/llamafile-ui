@@ -1,0 +1,209 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * "Nocturne" — the app's own theme, blending Dracula (purple accent, pink
+ * highlights, comment blue-grey) with One Dark (graphite-blue surfaces and its
+ * green / yellow / blue). The light variant keeps the same purple identity.
+ */
+:root {
+  --bg: #fbfaff;
+  --sidebar: #f1eff9;
+  --card: #ffffff;
+  --elevated: #ffffff;
+  --hover: rgba(76, 58, 140, 0.06);
+  --active: rgba(76, 58, 140, 0.1);
+  --line: rgba(60, 48, 110, 0.11);
+  --fg: #262335;
+  --muted: #6b6884;
+  --faint: #a29fb8;
+  --accent: #7c4ddb;
+  --accent-soft: rgba(124, 77, 219, 0.11);
+  --on-accent: #ffffff;
+  --pink: #d6409f;
+  --green: #3f9a3a;
+  --green-soft: rgba(80, 160, 70, 0.14);
+  --blue: #3a7fd5;
+  --orange: #b7791f;
+  --orange-soft: rgba(229, 192, 123, 0.28);
+  --red: #d63a5a;
+  --red-soft: rgba(214, 58, 90, 0.11);
+  --field: rgba(76, 58, 140, 0.05);
+  --bubble: #efeafc;
+  --shadow: 0 1px 2px rgba(40, 30, 90, 0.06), 0 4px 16px rgba(40, 30, 90, 0.07);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #262833;
+  --sidebar: #1f2029;
+  --card: #2d303d;
+  --elevated: #343746;
+  --hover: rgba(189, 147, 249, 0.07);
+  --active: rgba(189, 147, 249, 0.13);
+  --line: rgba(255, 255, 255, 0.07);
+  --fg: #e8e6f3;
+  --muted: #a3a6bf;
+  --faint: #6c7191;
+  --accent: #bd93f9;
+  --accent-soft: rgba(189, 147, 249, 0.16);
+  --on-accent: #1f2029;
+  --pink: #ff79c6;
+  --green: #98c379;
+  --green-soft: rgba(152, 195, 121, 0.16);
+  --blue: #61afef;
+  --orange: #e5c07b;
+  --orange-soft: rgba(229, 192, 123, 0.16);
+  --red: #ff6e87;
+  --red-soft: rgba(255, 110, 135, 0.15);
+  --field: rgba(255, 255, 255, 0.045);
+  --bubble: #383b4c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(10, 8, 25, 0.35);
+  color-scheme: dark;
+}
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI Variable", "Segoe UI", "Cantarell", system-ui, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --color-bg: var(--bg);
+  --color-sidebar: var(--sidebar);
+  --color-card: var(--card);
+  --color-elevated: var(--elevated);
+  --color-hover: var(--hover);
+  --color-active: var(--active);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-pink: var(--pink);
+  --color-ok: var(--green);
+  --color-ok-soft: var(--green-soft);
+  --color-warn: var(--orange);
+  --color-warn-soft: var(--orange-soft);
+  --color-bad: var(--red);
+  --color-bad-soft: var(--red-soft);
+  --color-field: var(--field);
+  --color-bubble: var(--bubble);
+  --shadow-mac: var(--shadow);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* Text the user may want to copy. */
+.selectable,
+.selectable * {
+  user-select: text;
+}
+
+.drag {
+  --wails-draggable: drag;
+}
+.no-drag {
+  --wails-draggable: no-drag;
+}
+
+/* Thin overlay-style scrollbars like macOS. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background-color: var(--active);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+button:focus-visible,
+select:focus-visible,
+[role="switch"]:focus-visible {
+  outline: 3px solid var(--accent-soft);
+  outline-offset: 1px;
+}
+textarea:focus-visible,
+input:focus-visible {
+  outline: none;
+}
+
+/* Markdown in chat answers. */
+.prose pre {
+  background: var(--field) !important;
+  color: var(--fg) !important;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+.prose code::before,
+.prose code::after {
+  content: none;
+}
+.prose :not(pre) > code {
+  background: var(--field);
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+  font-weight: 500;
+}
+
+/* highlight.js tokens — Nocturne: Dracula keywords/types, One Dark strings/functions. */
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-meta { color: var(--pink); }
+.hljs-string, .hljs-attr-value, .hljs-regexp { color: var(--green); }
+.hljs-number, .hljs-literal, .hljs-symbol { color: var(--orange); }
+.hljs-comment, .hljs-quote { color: var(--faint); font-style: italic; }
+.hljs-title, .hljs-function .hljs-title, .hljs-section { color: var(--blue); }
+.hljs-type, .hljs-class .hljs-title, .hljs-attr, .hljs-params { color: var(--accent); }
+.hljs-variable, .hljs-template-variable { color: var(--red); }
+.dark .hljs-comment, .dark .hljs-quote { color: #6272a4; } /* Dracula comment */
+.dark .hljs-type, .dark .hljs-class .hljs-title { color: #8be9fd; } /* Dracula cyan */
+
+/* Selection and caret in the brand color. */
+::selection {
+  background: var(--accent-soft);
+}
+textarea,
+input {
+  caret-color: var(--accent);
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+.caret::after {
+  content: "▍";
+  margin-left: 1px;
+  animation: blink 1s steps(1) infinite;
+  color: var(--accent);
+}
+
+/* macOS: let the native vibrancy show through the sidebar. */
+html[data-platform="darwin"] body {
+  background: transparent;
+}
+html[data-platform="darwin"] aside.bg-sidebar {
+  background: color-mix(in srgb, var(--sidebar) 62%, transparent);
+}

@@ -1,0 +1,1360 @@
+{
+ "models": [
+  {
+   "id": "qwen2.5-0.5b",
+   "name": "Qwen2.5 0.5B Instruct",
+   "publisher": "Alibaba",
+   "params_b": 0.49,
+   "active_params_b": 0.49,
+   "context": 32768,
+   "kv_mb_per_1k": 12,
+   "categories": [
+    "chat"
+   ],
+   "quality": {
+    "chat": 42
+   },
+   "runtime": "llamafile",
+   "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "minúsculo",
+    "multilíngue"
+   ],
+   "description": "O menor modelo útil do catálogo. Roda em qualquer máquina, ótimo para testes e tarefas simples.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+     "url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+     "size": 491400032
+    }
+   ]
+  },
+  {
+   "id": "gemma-3-1b",
+   "name": "Gemma 3 1B",
+   "publisher": "Google",
+   "params_b": 1,
+   "active_params_b": 1,
+   "context": 32768,
+   "kv_mb_per_1k": 26,
+   "categories": [
+    "chat"
+   ],
+   "quality": {
+    "chat": 52
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/google_gemma-3-1b-it-GGUF",
+   "license": "Gemma",
+   "tags": [
+    "leve",
+    "multilíngue"
+   ],
+   "description": "Modelo compacto do Google, rápido e com bom português para o tamanho.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "google_gemma-3-1b-it-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q4_K_M.gguf",
+     "size": 806058496
+    },
+    {
+     "quant": "Q8_0",
+     "file": "google_gemma-3-1b-it-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q8_0.gguf",
+     "size": 1069306624
+    }
+   ]
+  },
+  {
+   "id": "llama-3.2-1b",
+   "name": "Llama 3.2 1B Instruct",
+   "publisher": "Meta",
+   "params_b": 1.24,
+   "active_params_b": 1.24,
+   "context": 131072,
+   "kv_mb_per_1k": 32,
+   "categories": [
+    "chat"
+   ],
+   "quality": {
+    "chat": 50
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/Llama-3.2-1B-Instruct-GGUF",
+   "license": "Llama 3.2",
+   "tags": [
+    "leve",
+    "contexto longo"
+   ],
+   "description": "Assistente leve da Meta com contexto longo. Bom para resumos e respostas rápidas.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+     "size": 807694464
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Llama-3.2-1B-Instruct-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q8_0.gguf",
+     "size": 1321083008
+    }
+   ]
+  },
+  {
+   "id": "smollm2-1.7b",
+   "name": "SmolLM2 1.7B Instruct",
+   "publisher": "Hugging Face",
+   "params_b": 1.71,
+   "active_params_b": 1.71,
+   "context": 8192,
+   "kv_mb_per_1k": 192,
+   "categories": [
+    "chat"
+   ],
+   "quality": {
+    "chat": 50
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/SmolLM2-1.7B-Instruct-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "leve",
+    "aberto"
+   ],
+   "description": "Modelo pequeno e totalmente aberto, focado em inglês.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "SmolLM2-1.7B-Instruct-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/SmolLM2-1.7B-Instruct-GGUF/resolve/main/SmolLM2-1.7B-Instruct-Q4_K_M.gguf",
+     "size": 1055609824
+    },
+    {
+     "quant": "Q8_0",
+     "file": "SmolLM2-1.7B-Instruct-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/SmolLM2-1.7B-Instruct-GGUF/resolve/main/SmolLM2-1.7B-Instruct-Q8_0.gguf",
+     "size": 1820414944
+    }
+   ]
+  },
+  {
+   "id": "qwen3-1.7b",
+   "name": "Qwen3 1.7B",
+   "publisher": "Alibaba",
+   "params_b": 1.7,
+   "active_params_b": 1.7,
+   "context": 32768,
+   "kv_mb_per_1k": 112,
+   "categories": [
+    "chat",
+    "reasoning"
+   ],
+   "quality": {
+    "chat": 60,
+    "code": 50,
+    "reasoning": 62
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/Qwen_Qwen3-1.7B-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "raciocínio",
+    "multilíngue"
+   ],
+   "description": "Pequeno, com modo de raciocínio (thinking). Excelente custo-benefício.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Qwen_Qwen3-1.7B-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen_Qwen3-1.7B-GGUF/resolve/main/Qwen_Qwen3-1.7B-Q4_K_M.gguf",
+     "size": 1282439584
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Qwen_Qwen3-1.7B-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen_Qwen3-1.7B-GGUF/resolve/main/Qwen_Qwen3-1.7B-Q8_0.gguf",
+     "size": 2165039520
+    }
+   ]
+  },
+  {
+   "id": "granite-3.3-2b",
+   "name": "Granite 3.3 2B Instruct",
+   "publisher": "IBM",
+   "params_b": 2.5,
+   "active_params_b": 2.5,
+   "context": 131072,
+   "kv_mb_per_1k": 80,
+   "categories": [
+    "chat"
+   ],
+   "quality": {
+    "chat": 58,
+    "code": 50
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/ibm-granite_granite-3.3-2b-instruct-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "empresarial",
+    "contexto longo"
+   ],
+   "description": "Modelo da IBM pensado para uso empresarial, RAG e seguir instruções.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "ibm-granite_granite-3.3-2b-instruct-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/ibm-granite_granite-3.3-2b-instruct-GGUF/resolve/main/ibm-granite_granite-3.3-2b-instruct-Q4_K_M.gguf",
+     "size": 1545303616
+    },
+    {
+     "quant": "Q8_0",
+     "file": "ibm-granite_granite-3.3-2b-instruct-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/ibm-granite_granite-3.3-2b-instruct-GGUF/resolve/main/ibm-granite_granite-3.3-2b-instruct-Q8_0.gguf",
+     "size": 2694120384
+    }
+   ]
+  },
+  {
+   "id": "llama-3.2-3b",
+   "name": "Llama 3.2 3B Instruct",
+   "publisher": "Meta",
+   "params_b": 3.21,
+   "active_params_b": 3.21,
+   "context": 131072,
+   "kv_mb_per_1k": 112,
+   "categories": [
+    "chat"
+   ],
+   "quality": {
+    "chat": 64
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/Llama-3.2-3B-Instruct-GGUF",
+   "license": "Llama 3.2",
+   "tags": [
+    "equilibrado"
+   ],
+   "description": "Bom equilíbrio entre qualidade e velocidade para conversas do dia a dia.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+     "size": 2019377696
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Llama-3.2-3B-Instruct-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q8_0.gguf",
+     "size": 3421899296
+    }
+   ]
+  },
+  {
+   "id": "phi-4-mini",
+   "name": "Phi-4 mini Instruct",
+   "publisher": "Microsoft",
+   "params_b": 3.84,
+   "active_params_b": 3.84,
+   "context": 131072,
+   "kv_mb_per_1k": 128,
+   "categories": [
+    "chat",
+    "reasoning"
+   ],
+   "quality": {
+    "chat": 68,
+    "code": 60,
+    "reasoning": 68
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/microsoft_Phi-4-mini-instruct-GGUF",
+   "license": "MIT",
+   "tags": [
+    "matemática",
+    "contexto longo"
+   ],
+   "description": "Forte em lógica e matemática para o tamanho, licença MIT.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "microsoft_Phi-4-mini-instruct-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/microsoft_Phi-4-mini-instruct-GGUF/resolve/main/microsoft_Phi-4-mini-instruct-Q4_K_M.gguf",
+     "size": 2491874688
+    },
+    {
+     "quant": "Q8_0",
+     "file": "microsoft_Phi-4-mini-instruct-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/microsoft_Phi-4-mini-instruct-GGUF/resolve/main/microsoft_Phi-4-mini-instruct-Q8_0.gguf",
+     "size": 4084611456
+    }
+   ]
+  },
+  {
+   "id": "gemma-3-4b",
+   "name": "Gemma 3 4B",
+   "publisher": "Google",
+   "params_b": 4.3,
+   "active_params_b": 4.3,
+   "context": 131072,
+   "kv_mb_per_1k": 136,
+   "categories": [
+    "chat",
+    "vision"
+   ],
+   "quality": {
+    "chat": 72,
+    "vision": 66
+   },
+   "runtime": "llamafile",
+   "repo": "ggml-org/gemma-3-4b-it-GGUF",
+   "license": "Gemma",
+   "tags": [
+    "visão",
+    "multilíngue"
+   ],
+   "description": "Conversa muito bem em português e entende imagens.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "gemma-3-4b-it-Q4_K_M.gguf",
+     "url": "https://huggingface.co/ggml-org/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf",
+     "size": 2489757856
+    },
+    {
+     "quant": "Q8_0",
+     "file": "gemma-3-4b-it-Q8_0.gguf",
+     "url": "https://huggingface.co/ggml-org/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q8_0.gguf",
+     "size": 4130226336
+    }
+   ],
+   "mmproj": {
+    "file": "mmproj-model-f16.gguf",
+    "url": "https://huggingface.co/ggml-org/gemma-3-4b-it-GGUF/resolve/main/mmproj-model-f16.gguf",
+    "size": 851251104
+   }
+  },
+  {
+   "id": "qwen3-4b",
+   "name": "Qwen3 4B",
+   "publisher": "Alibaba",
+   "params_b": 4,
+   "active_params_b": 4,
+   "context": 32768,
+   "kv_mb_per_1k": 144,
+   "categories": [
+    "chat",
+    "reasoning",
+    "code"
+   ],
+   "quality": {
+    "chat": 72,
+    "code": 64,
+    "reasoning": 76
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/Qwen_Qwen3-4B-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "raciocínio",
+    "multilíngue"
+   ],
+   "description": "Um dos melhores modelos até 4B. Alterna entre resposta direta e raciocínio.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Qwen_Qwen3-4B-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen_Qwen3-4B-GGUF/resolve/main/Qwen_Qwen3-4B-Q4_K_M.gguf",
+     "size": 2497280960
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Qwen_Qwen3-4B-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen_Qwen3-4B-GGUF/resolve/main/Qwen_Qwen3-4B-Q8_0.gguf",
+     "size": 4280405440
+    }
+   ]
+  },
+  {
+   "id": "mistral-7b-v0.3",
+   "name": "Mistral 7B Instruct v0.3",
+   "publisher": "Mistral AI",
+   "params_b": 7.25,
+   "active_params_b": 7.25,
+   "context": 32768,
+   "kv_mb_per_1k": 128,
+   "categories": [
+    "chat"
+   ],
+   "quality": {
+    "chat": 66
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "clássico"
+   ],
+   "description": "Clássico confiável de 7B, bom em escrita.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
+     "size": 4372812000
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Mistral-7B-Instruct-v0.3-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3-Q8_0.gguf",
+     "size": 7702565088
+    }
+   ]
+  },
+  {
+   "id": "qwen3-8b",
+   "name": "Qwen3 8B",
+   "publisher": "Alibaba",
+   "params_b": 8.2,
+   "active_params_b": 8.2,
+   "context": 32768,
+   "kv_mb_per_1k": 144,
+   "categories": [
+    "chat",
+    "reasoning",
+    "code"
+   ],
+   "quality": {
+    "chat": 80,
+    "code": 72,
+    "reasoning": 82
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/Qwen_Qwen3-8B-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "raciocínio",
+    "multilíngue"
+   ],
+   "description": "Qualidade de modelo grande em 8B. Ideal com GPU de 8 GB ou 16 GB de RAM.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Qwen_Qwen3-8B-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen_Qwen3-8B-GGUF/resolve/main/Qwen_Qwen3-8B-Q4_K_M.gguf",
+     "size": 5027784224
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Qwen_Qwen3-8B-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen_Qwen3-8B-GGUF/resolve/main/Qwen_Qwen3-8B-Q8_0.gguf",
+     "size": 8709518880
+    }
+   ]
+  },
+  {
+   "id": "gpt-oss-20b",
+   "name": "gpt-oss 20B",
+   "publisher": "OpenAI",
+   "params_b": 20.9,
+   "active_params_b": 3.6,
+   "context": 131072,
+   "kv_mb_per_1k": 48,
+   "categories": [
+    "chat",
+    "reasoning",
+    "code"
+   ],
+   "quality": {
+    "chat": 84,
+    "code": 78,
+    "reasoning": 88
+   },
+   "runtime": "llamafile",
+   "repo": "ggml-org/gpt-oss-20b-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "MoE",
+    "raciocínio"
+   ],
+   "description": "Mixture-of-Experts: só 3.6B ativos por token, então é rápido para o tamanho. Precisa de ~16 GB.",
+   "files": [
+    {
+     "quant": "MXFP4",
+     "file": "gpt-oss-20b-MXFP4.gguf",
+     "url": "https://huggingface.co/ggml-org/gpt-oss-20b-GGUF/resolve/main/gpt-oss-20b-MXFP4.gguf",
+     "size": 12109566624
+    }
+   ]
+  },
+  {
+   "id": "qwen2.5-coder-1.5b",
+   "name": "Qwen2.5 Coder 1.5B",
+   "publisher": "Alibaba",
+   "params_b": 1.54,
+   "active_params_b": 1.54,
+   "context": 32768,
+   "kv_mb_per_1k": 28,
+   "categories": [
+    "code"
+   ],
+   "quality": {
+    "code": 60
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "autocomplete",
+    "leve"
+   ],
+   "description": "Ótimo para autocompletar e snippets, roda até em notebooks modestos.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf",
+     "size": 986048800
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Qwen2.5-Coder-1.5B-Instruct-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-1.5B-Instruct-Q8_0.gguf",
+     "size": 1646573344
+    }
+   ]
+  },
+  {
+   "id": "qwen2.5-coder-3b",
+   "name": "Qwen2.5 Coder 3B",
+   "publisher": "Alibaba",
+   "params_b": 3.09,
+   "active_params_b": 3.09,
+   "context": 32768,
+   "kv_mb_per_1k": 36,
+   "categories": [
+    "code"
+   ],
+   "quality": {
+    "code": 68
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/Qwen2.5-Coder-3B-Instruct-GGUF",
+   "license": "Qwen Research",
+   "tags": [
+    "código"
+   ],
+   "description": "Bom assistente de programação em máquinas sem GPU dedicada.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf",
+     "size": 1929903360
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Qwen2.5-Coder-3B-Instruct-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-3B-Instruct-Q8_0.gguf",
+     "size": 3285476608
+    }
+   ]
+  },
+  {
+   "id": "qwen2.5-coder-7b",
+   "name": "Qwen2.5 Coder 7B",
+   "publisher": "Alibaba",
+   "params_b": 7.62,
+   "active_params_b": 7.62,
+   "context": 32768,
+   "kv_mb_per_1k": 56,
+   "categories": [
+    "code"
+   ],
+   "quality": {
+    "code": 78
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "código",
+    "refatoração"
+   ],
+   "description": "Referência entre os modelos de código de 7B: gera, explica e refatora.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+     "size": 4683074336
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Qwen2.5-Coder-7B-Instruct-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q8_0.gguf",
+     "size": 8098525984
+    }
+   ]
+  },
+  {
+   "id": "r1-distill-qwen-1.5b",
+   "name": "DeepSeek R1 Distill 1.5B",
+   "publisher": "DeepSeek",
+   "params_b": 1.78,
+   "active_params_b": 1.78,
+   "context": 131072,
+   "kv_mb_per_1k": 28,
+   "categories": [
+    "reasoning"
+   ],
+   "quality": {
+    "reasoning": 58
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+   "license": "MIT",
+   "tags": [
+    "raciocínio",
+    "matemática"
+   ],
+   "description": "Raciocínio passo a passo em um modelo minúsculo. Melhor em matemática.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
+     "size": 1117320800
+    },
+    {
+     "quant": "Q8_0",
+     "file": "DeepSeek-R1-Distill-Qwen-1.5B-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q8_0.gguf",
+     "size": 1894532192
+    }
+   ]
+  },
+  {
+   "id": "r1-distill-qwen-7b",
+   "name": "DeepSeek R1 Distill 7B",
+   "publisher": "DeepSeek",
+   "params_b": 7.62,
+   "active_params_b": 7.62,
+   "context": 131072,
+   "kv_mb_per_1k": 56,
+   "categories": [
+    "reasoning"
+   ],
+   "quality": {
+    "reasoning": 72
+   },
+   "runtime": "llamafile",
+   "repo": "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+   "license": "MIT",
+   "tags": [
+    "raciocínio"
+   ],
+   "description": "Raciocínio sólido para problemas de lógica e matemática.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf",
+     "url": "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf",
+     "size": 4683073504
+    },
+    {
+     "quant": "Q8_0",
+     "file": "DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf",
+     "url": "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf",
+     "size": 8098525152
+    }
+   ]
+  },
+  {
+   "id": "smolvlm2-2.2b",
+   "name": "SmolVLM2 2.2B",
+   "publisher": "Hugging Face",
+   "params_b": 2.2,
+   "active_params_b": 2.2,
+   "context": 8192,
+   "kv_mb_per_1k": 192,
+   "categories": [
+    "vision"
+   ],
+   "quality": {
+    "vision": 55
+   },
+   "runtime": "llamafile",
+   "repo": "ggml-org/SmolVLM2-2.2B-Instruct-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "visão",
+    "leve"
+   ],
+   "description": "Descreve imagens e lê documentos em máquinas modestas.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "SmolVLM2-2.2B-Instruct-Q4_K_M.gguf",
+     "url": "https://huggingface.co/ggml-org/SmolVLM2-2.2B-Instruct-GGUF/resolve/main/SmolVLM2-2.2B-Instruct-Q4_K_M.gguf",
+     "size": 1112602656
+    },
+    {
+     "quant": "Q8_0",
+     "file": "SmolVLM2-2.2B-Instruct-Q8_0.gguf",
+     "url": "https://huggingface.co/ggml-org/SmolVLM2-2.2B-Instruct-GGUF/resolve/main/SmolVLM2-2.2B-Instruct-Q8_0.gguf",
+     "size": 1927933984
+    }
+   ],
+   "mmproj": {
+    "file": "mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf",
+    "url": "https://huggingface.co/ggml-org/SmolVLM2-2.2B-Instruct-GGUF/resolve/main/mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf",
+    "size": 592523200
+   }
+  },
+  {
+   "id": "qwen2.5-vl-3b",
+   "name": "Qwen2.5 VL 3B",
+   "publisher": "Alibaba",
+   "params_b": 3.75,
+   "active_params_b": 3.75,
+   "context": 32768,
+   "kv_mb_per_1k": 36,
+   "categories": [
+    "vision"
+   ],
+   "quality": {
+    "vision": 68
+   },
+   "runtime": "llamafile",
+   "repo": "ggml-org/Qwen2.5-VL-3B-Instruct-GGUF",
+   "license": "Qwen Research",
+   "tags": [
+    "visão",
+    "OCR"
+   ],
+   "description": "Muito bom em OCR, gráficos e capturas de tela.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf",
+     "url": "https://huggingface.co/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf",
+     "size": 1929901056
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Qwen2.5-VL-3B-Instruct-Q8_0.gguf",
+     "url": "https://huggingface.co/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/Qwen2.5-VL-3B-Instruct-Q8_0.gguf",
+     "size": 3285474304
+    }
+   ],
+   "mmproj": {
+    "file": "mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf",
+    "url": "https://huggingface.co/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf",
+    "size": 844757728
+   }
+  },
+  {
+   "id": "whisper-tiny",
+   "name": "Whisper Tiny",
+   "publisher": "OpenAI",
+   "params_b": 0.039,
+   "active_params_b": 0.039,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "voice"
+   ],
+   "quality": {
+    "voice": 35
+   },
+   "runtime": "whisperfile",
+   "repo": "ggerganov/whisper.cpp",
+   "license": "MIT",
+   "tags": [
+    "transcrição",
+    "instantâneo"
+   ],
+   "description": "Transcrição de voz quase instantânea, precisão básica.",
+   "files": [
+    {
+     "quant": "Q5_1",
+     "file": "ggml-tiny-q5_1.bin",
+     "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin",
+     "size": 32152673
+    },
+    {
+     "quant": "F16",
+     "file": "ggml-tiny.bin",
+     "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
+     "size": 77691713
+    }
+   ]
+  },
+  {
+   "id": "whisper-base",
+   "name": "Whisper Base",
+   "publisher": "OpenAI",
+   "params_b": 0.074,
+   "active_params_b": 0.074,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "voice"
+   ],
+   "quality": {
+    "voice": 55
+   },
+   "runtime": "whisperfile",
+   "repo": "ggerganov/whisper.cpp",
+   "license": "MIT",
+   "tags": [
+    "transcrição"
+   ],
+   "description": "Bom ponto de partida para ditado em português.",
+   "files": [
+    {
+     "quant": "Q5_1",
+     "file": "ggml-base-q5_1.bin",
+     "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
+     "size": 59707625
+    },
+    {
+     "quant": "F16",
+     "file": "ggml-base.bin",
+     "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
+     "size": 147951465
+    }
+   ]
+  },
+  {
+   "id": "whisper-small",
+   "name": "Whisper Small",
+   "publisher": "OpenAI",
+   "params_b": 0.244,
+   "active_params_b": 0.244,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "voice"
+   ],
+   "quality": {
+    "voice": 64
+   },
+   "runtime": "whisperfile",
+   "repo": "ggerganov/whisper.cpp",
+   "license": "MIT",
+   "tags": [
+    "transcrição",
+    "multilíngue"
+   ],
+   "description": "Precisão boa em vários idiomas sem pesar.",
+   "files": [
+    {
+     "quant": "Q5_1",
+     "file": "ggml-small-q5_1.bin",
+     "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
+     "size": 190085487
+    },
+    {
+     "quant": "F16",
+     "file": "ggml-small.bin",
+     "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
+     "size": 487601967
+    }
+   ]
+  },
+  {
+   "id": "whisper-medium",
+   "name": "Whisper Medium",
+   "publisher": "OpenAI",
+   "params_b": 0.769,
+   "active_params_b": 0.769,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "voice"
+   ],
+   "quality": {
+    "voice": 72
+   },
+   "runtime": "whisperfile",
+   "repo": "ggerganov/whisper.cpp",
+   "license": "MIT",
+   "tags": [
+    "transcrição",
+    "precisão"
+   ],
+   "description": "Alta precisão; recomendado com GPU.",
+   "files": [
+    {
+     "quant": "Q5_0",
+     "file": "ggml-medium-q5_0.bin",
+     "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q5_0.bin",
+     "size": 539212467
+    },
+    {
+     "quant": "Q8_0",
+     "file": "ggml-medium-q8_0.bin",
+     "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q8_0.bin",
+     "size": 823369779
+    }
+   ]
+  },
+  {
+   "id": "whisper-large-v3-turbo",
+   "name": "Whisper Large v3 Turbo",
+   "publisher": "OpenAI",
+   "params_b": 0.809,
+   "active_params_b": 0.809,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "voice"
+   ],
+   "quality": {
+    "voice": 80
+   },
+   "runtime": "whisperfile",
+   "repo": "ggerganov/whisper.cpp",
+   "license": "MIT",
+   "tags": [
+    "transcrição",
+    "estado da arte"
+   ],
+   "description": "O melhor Whisper em precisão com velocidade de modelo médio.",
+   "files": [
+    {
+     "quant": "Q5_0",
+     "file": "ggml-large-v3-turbo-q5_0.bin",
+     "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
+     "size": 574041195
+    },
+    {
+     "quant": "Q8_0",
+     "file": "ggml-large-v3-turbo-q8_0.bin",
+     "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q8_0.bin",
+     "size": 874188075
+    }
+   ]
+  },
+  {
+   "id": "nomic-embed-v1.5",
+   "name": "Nomic Embed Text v1.5",
+   "publisher": "Nomic AI",
+   "params_b": 0.137,
+   "active_params_b": 0.137,
+   "context": 8192,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "embedding"
+   ],
+   "quality": {
+    "embedding": 68
+   },
+   "runtime": "llamafile",
+   "repo": "nomic-ai/nomic-embed-text-v1.5-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "RAG",
+    "busca semântica"
+   ],
+   "description": "Embeddings rápidos e leves (melhor em inglês).",
+   "files": [
+    {
+     "quant": "Q8_0",
+     "file": "nomic-embed-text-v1.5.Q8_0.gguf",
+     "url": "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q8_0.gguf",
+     "size": 146146432
+    },
+    {
+     "quant": "F16",
+     "file": "nomic-embed-text-v1.5.f16.gguf",
+     "url": "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.f16.gguf",
+     "size": 274290560
+    }
+   ],
+   "embed": {
+    "query_prefix": "search_query: ",
+    "doc_prefix": "search_document: "
+   }
+  },
+  {
+   "id": "sd-turbo",
+   "name": "SD-Turbo",
+   "publisher": "Stability AI",
+   "params_b": 1.3,
+   "active_params_b": 1.3,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "image"
+   ],
+   "quality": {
+    "image": 55
+   },
+   "runtime": "diffusionfile",
+   "repo": "Green-Sky/SD-Turbo-GGUF",
+   "license": "Stability AI Community",
+   "tags": [
+    "1 passo",
+    "rápido"
+   ],
+   "description": "Gera uma imagem em 1 passo. O mais rápido do catálogo, ideal para CPU.",
+   "files": [
+    {
+     "quant": "Q8_0",
+     "file": "sd_turbo-f16-q8_0.gguf",
+     "url": "https://huggingface.co/Green-Sky/SD-Turbo-GGUF/resolve/main/sd_turbo-f16-q8_0.gguf",
+     "size": 2023745376
+    }
+   ],
+   "components": [
+    {
+     "role": "taesd",
+     "file": "taesd.safetensors",
+     "url": "https://huggingface.co/madebyollin/taesd/resolve/main/diffusion_pytorch_model.safetensors",
+     "size": 9793292
+    }
+   ],
+   "image": {
+    "main_flag": "model",
+    "steps": 1,
+    "cfg": 1.0,
+    "width": 512,
+    "height": 512,
+    "sampler": "euler_a",
+    "diffusion_params_b": 0.87,
+    "vae_cost": 1.0
+   }
+  },
+  {
+   "id": "sdxl-turbo",
+   "name": "SDXL-Turbo",
+   "publisher": "Stability AI",
+   "params_b": 3.5,
+   "active_params_b": 3.5,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "image"
+   ],
+   "quality": {
+    "image": 66
+   },
+   "runtime": "diffusionfile",
+   "repo": "OlegSkutte/sdxl-turbo-GGUF",
+   "license": "Stability AI Community",
+   "tags": [
+    "poucos passos",
+    "detalhado"
+   ],
+   "description": "Mais detalhe que o SD-Turbo em 1 a 4 passos.",
+   "files": [
+    {
+     "quant": "Q8_0",
+     "file": "sd_xl_turbo_1.0.q8_0.gguf",
+     "url": "https://huggingface.co/OlegSkutte/sdxl-turbo-GGUF/resolve/main/sd_xl_turbo_1.0.q8_0.gguf",
+     "size": 4098988672
+    }
+   ],
+   "components": [
+    {
+     "role": "taesd",
+     "file": "taesdxl.safetensors",
+     "url": "https://huggingface.co/madebyollin/taesdxl/resolve/main/diffusion_pytorch_model.safetensors",
+     "size": 9793292
+    }
+   ],
+   "image": {
+    "main_flag": "model",
+    "steps": 2,
+    "cfg": 1.0,
+    "width": 512,
+    "height": 512,
+    "sampler": "euler_a",
+    "diffusion_params_b": 2.6,
+    "vae_cost": 1.0
+   }
+  },
+  {
+   "id": "sd-1.5",
+   "name": "Stable Diffusion 1.5",
+   "publisher": "Runway / Stability AI",
+   "params_b": 1.07,
+   "active_params_b": 1.07,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "image"
+   ],
+   "quality": {
+    "image": 48
+   },
+   "runtime": "diffusionfile",
+   "repo": "second-state/stable-diffusion-v1-5-GGUF",
+   "license": "CreativeML OpenRAIL-M",
+   "tags": [
+    "clássico",
+    "prompt negativo"
+   ],
+   "description": "O clássico: aceita prompt negativo e muitos estilos, mas precisa de ~20 passos.",
+   "files": [
+    {
+     "quant": "Q8_0",
+     "file": "stable-diffusion-v1-5-pruned-emaonly-Q8_0.gguf",
+     "url": "https://huggingface.co/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q8_0.gguf",
+     "size": 1763578176
+    },
+    {
+     "quant": "Q4_0",
+     "file": "stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
+     "url": "https://huggingface.co/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q4_0.gguf",
+     "size": 1566768416
+    }
+   ],
+   "components": [
+    {
+     "role": "taesd",
+     "file": "taesd.safetensors",
+     "url": "https://huggingface.co/madebyollin/taesd/resolve/main/diffusion_pytorch_model.safetensors",
+     "size": 9793292
+    }
+   ],
+   "image": {
+    "main_flag": "model",
+    "steps": 20,
+    "cfg": 7.0,
+    "width": 512,
+    "height": 512,
+    "sampler": "euler_a",
+    "diffusion_params_b": 0.86,
+    "vae_cost": 1.0
+   }
+  },
+  {
+   "id": "z-image-turbo",
+   "name": "Z-Image Turbo",
+   "publisher": "Alibaba Tongyi",
+   "params_b": 10.2,
+   "active_params_b": 6,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "image"
+   ],
+   "quality": {
+    "image": 88
+   },
+   "runtime": "diffusionfile",
+   "repo": "leejet/Z-Image-Turbo-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "fotorrealista",
+    "texto na imagem"
+   ],
+   "description": "Qualidade de ponta em 8 passos, inclusive texto legível. Pesado: recomendado com bastante RAM.",
+   "files": [
+    {
+     "quant": "Q4_K",
+     "file": "z_image_turbo-Q4_K.gguf",
+     "url": "https://huggingface.co/leejet/Z-Image-Turbo-GGUF/resolve/main/z_image_turbo-Q4_K.gguf",
+     "size": 3864250304
+    },
+    {
+     "quant": "Q3_K",
+     "file": "z_image_turbo-Q3_K.gguf",
+     "url": "https://huggingface.co/leejet/Z-Image-Turbo-GGUF/resolve/main/z_image_turbo-Q3_K.gguf",
+     "size": 3143559104
+    }
+   ],
+   "components": [
+    {
+     "role": "vae",
+     "file": "flux-ae.safetensors",
+     "url": "https://huggingface.co/second-state/FLUX.1-schnell-GGUF/resolve/main/ae.safetensors",
+     "size": 335304388
+    },
+    {
+     "role": "llm",
+     "file": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+     "url": "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+     "size": 2497281120
+    },
+    {
+     "role": "taesd",
+     "file": "taef1.safetensors",
+     "url": "https://huggingface.co/madebyollin/taef1/resolve/main/diffusion_pytorch_model.safetensors",
+     "size": 9848636
+    }
+   ],
+   "image": {
+    "main_flag": "diffusion-model",
+    "steps": 8,
+    "cfg": 1.0,
+    "width": 768,
+    "height": 768,
+    "sampler": "euler",
+    "diffusion_params_b": 6.0,
+    "vae_cost": 2.0,
+    "args": [
+     "--offload-to-cpu"
+    ]
+   }
+  },
+  {
+   "id": "flux-schnell",
+   "name": "FLUX.1 schnell",
+   "publisher": "Black Forest Labs",
+   "params_b": 16.9,
+   "active_params_b": 12,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "image"
+   ],
+   "quality": {
+    "image": 84
+   },
+   "runtime": "diffusionfile",
+   "repo": "second-state/FLUX.1-schnell-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "4 passos",
+    "alta qualidade"
+   ],
+   "description": "Excelente composição e aderência ao prompt em 4 passos. Muito pesado para CPU.",
+   "files": [
+    {
+     "quant": "Q4_0",
+     "file": "flux1-schnell-Q4_0.gguf",
+     "url": "https://huggingface.co/second-state/FLUX.1-schnell-GGUF/resolve/main/flux1-schnell-Q4_0.gguf",
+     "size": 6688845536
+    }
+   ],
+   "components": [
+    {
+     "role": "vae",
+     "file": "flux-ae.safetensors",
+     "url": "https://huggingface.co/second-state/FLUX.1-schnell-GGUF/resolve/main/ae.safetensors",
+     "size": 335304388
+    },
+    {
+     "role": "clip_l",
+     "file": "clip_l-Q8_0.gguf",
+     "url": "https://huggingface.co/second-state/FLUX.1-schnell-GGUF/resolve/main/clip_l-Q8_0.gguf",
+     "size": 130769600
+    },
+    {
+     "role": "t5xxl",
+     "file": "t5xxl-Q4_K.gguf",
+     "url": "https://huggingface.co/second-state/FLUX.1-schnell-GGUF/resolve/main/t5xxl-Q4_K.gguf",
+     "size": 2752844256
+    },
+    {
+     "role": "taesd",
+     "file": "taef1.safetensors",
+     "url": "https://huggingface.co/madebyollin/taef1/resolve/main/diffusion_pytorch_model.safetensors",
+     "size": 9848636
+    }
+   ],
+   "image": {
+    "main_flag": "diffusion-model",
+    "steps": 4,
+    "cfg": 1.0,
+    "width": 768,
+    "height": 768,
+    "sampler": "euler",
+    "diffusion_params_b": 12.0,
+    "vae_cost": 2.0,
+    "args": [
+     "--clip-on-cpu",
+     "--offload-to-cpu"
+    ]
+   }
+  },
+  {
+   "id": "qwen3-embedding-0.6b",
+   "name": "Qwen3 Embedding 0.6B",
+   "publisher": "Alibaba",
+   "params_b": 0.6,
+   "active_params_b": 0.6,
+   "context": 32768,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "embedding"
+   ],
+   "quality": {
+    "embedding": 80
+   },
+   "runtime": "llamafile",
+   "repo": "Qwen/Qwen3-Embedding-0.6B-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "multilíngue",
+    "RAG"
+   ],
+   "description": "Embeddings multilíngues de alta qualidade — ótimo para documentos em português.",
+   "files": [
+    {
+     "quant": "Q8_0",
+     "file": "Qwen3-Embedding-0.6B-Q8_0.gguf",
+     "url": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/Qwen3-Embedding-0.6B-Q8_0.gguf",
+     "size": 639150592
+    }
+   ],
+   "embed": {
+    "query_prefix": "Instruct: Given a question, retrieve passages that answer it\nQuery: ",
+    "doc_prefix": ""
+   }
+  },
+  {
+   "id": "bge-m3",
+   "name": "BGE-M3",
+   "publisher": "BAAI",
+   "params_b": 0.57,
+   "active_params_b": 0.57,
+   "context": 8192,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "embedding"
+   ],
+   "quality": {
+    "embedding": 76
+   },
+   "runtime": "llamafile",
+   "repo": "gpustack/bge-m3-GGUF",
+   "license": "MIT",
+   "tags": [
+    "multilíngue",
+    "documentos longos"
+   ],
+   "description": "Embeddings multilíngues robustos, bons para documentos longos.",
+   "files": [
+    {
+     "quant": "Q8_0",
+     "file": "bge-m3-Q8_0.gguf",
+     "url": "https://huggingface.co/gpustack/bge-m3-GGUF/resolve/main/bge-m3-Q8_0.gguf",
+     "size": 634553760
+    },
+    {
+     "quant": "Q4_K_M",
+     "file": "bge-m3-Q4_K_M.gguf",
+     "url": "https://huggingface.co/gpustack/bge-m3-GGUF/resolve/main/bge-m3-Q4_K_M.gguf",
+     "size": 437778496
+    }
+   ],
+   "embed": {
+    "query_prefix": "",
+    "doc_prefix": ""
+   }
+  }
+ ],
+ "version": 2
+}

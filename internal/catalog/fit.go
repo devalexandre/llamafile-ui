@@ -1,0 +1,339 @@
+package catalog
+
+import (
+	"math"
+	"strings"
+
+	"github.com/devalexandre/llamafile-ui/internal/hardware"
+)
+
+// Fit describes how well one quant of a model runs on this machine.
+//
+// Inspired by llmfit (https://github.com/AlexsJones/llmfit), specialised for llamafile/GGUF:
+//
+//	required = weights + extras + KV cache(ctx) + runtime overhead
+//	fit      = required / memory pool  (≤60% perfect, ≤85% good, ≤98% marginal)
+//	speed    = LLM: bandwidth / bytes read per token; Whisper: realtime factor;
+//	           diffusion: seconds per image (calibrated on CPU runs)
+//	score    = weighted(quality, speed, fit, context) per use case
+type Fit struct {
+	Quant           string  `json:"quant"`
+	File            string  `json:"file"`
+	DownloadBytes   int64   `json:"downloadBytes"`
+	RequiredGB      float64 `json:"requiredGb"`
+	Mode            string  `json:"mode"` // GPU, GPU+CPU, CPU, Metal
+	Utilization     float64 `json:"utilization"`
+	Level           string  `json:"level"` // perfect, good, marginal, tight
+	Label           string  `json:"label"`
+	TPS             float64 `json:"tps"`             // LLMs
+	RealtimeFactor  float64 `json:"realtimeFactor"`  // Whisper: seconds of work per second of audio
+	SecondsPerImage float64 `json:"secondsPerImage"` // diffusion
+	SpeedLabel      string  `json:"speedLabel"`
+	QualityScore    float64 `json:"qualityScore"`
+	SpeedScore      float64 `json:"speedScore"`
+	FitScore        float64 `json:"fitScore"`
+	ContextScore    float64 `json:"contextScore"`
+	Score           float64 `json:"score"`
+	Category        string  `json:"category"`
+}
+
+type weights struct {
+	quality, speed, fit, context float64
+	targetTPS                    float64 // tok/s that feels "fast enough"
+	targetContext                int     // tokens the use case usually needs
+}
+
+func weightsFor(category string) weights {
+	switch category {
+	case "code":
+		return weights{0.50, 0.25, 0.15, 0.10, 25, 16384}
+	case "reasoning":
+		return weights{0.55, 0.20, 0.15, 0.10, 20, 16384}
+	case "vision":
+		return weights{0.50, 0.20, 0.20, 0.10, 15, 8192}
+	case "image":
+		return weights{0.45, 0.40, 0.15, 0, 0, 0}
+	case "voice":
+		return weights{0.45, 0.40, 0.15, 0, 0, 0}
+	case "embedding":
+		return weights{0.55, 0.15, 0.30, 0, 0, 0}
+	default: // chat
+		return weights{0.40, 0.30, 0.20, 0.10, 25, 8192}
+	}
+}
+
+func quantPenalty(quant string) float64 {
+	q := strings.ToUpper(quant)
+	switch {
+	case strings.HasPrefix(q, "Q2"), strings.HasPrefix(q, "Q3"):
+		return 8
+	case strings.HasPrefix(q, "Q4"):
+		return 4
+	case strings.HasPrefix(q, "Q5"):
+		return 2
+	}
+	return 0 // Q6/Q8/F16/BF16/MXFP4
+}
+
+func levelFor(u float64) string {
+	switch {
+	case u <= 0.60:
+		return "perfect"
+	case u <= 0.85:
+		return "good"
+	case u <= 0.98:
+		return "marginal"
+	}
+	return "tight"
+}
+
+func LevelLabel(level string) string {
+	switch level {
+	case "perfect":
+		return "Roda perfeitamente"
+	case "good":
+		return "Roda bem"
+	case "marginal":
+		return "No limite"
+	}
+	return "Não cabe"
+}
+
+func fitScoreFor(u float64) float64 {
+	switch {
+	case u > 0.98:
+		return 0
+	case u <= 0.5:
+		return 90 // room to spare: fine, but a bigger model could fit too
+	case u <= 0.8:
+		return 100
+	}
+	return 100 - (u-0.8)/0.18*50
+}
+
+func label(v float64, thresholds [3]float64, lowerIsFaster bool) string {
+	names := [4]string{"Muito rápido", "Rápido", "Usável", "Lento"}
+	for i, t := range thresholds {
+		if (lowerIsFaster && v < t) || (!lowerIsFaster && v >= t) {
+			return names[i]
+		}
+	}
+	return names[3]
+}
+
+func quality(m *Model, category, quant string) float64 {
+	q, ok := m.Quality[category]
+	if !ok {
+		best := 0.0
+		for _, v := range m.Quality {
+			best = max(best, v)
+		}
+		q = best * 0.85
+	}
+	return max(0, q-quantPenalty(quant))
+}
+
+// Evaluate scores one quant file of a model for a category.
+func Evaluate(m *Model, f File, category string, hw hardware.Info, contextSize int) Fit {
+	var fit Fit
+	switch m.Runtime {
+	case RuntimeWhisper:
+		fit = evaluateWhisper(m, f, hw)
+	case RuntimeDiffusion:
+		fit = evaluateDiffusion(m, f, hw)
+	default:
+		fit = evaluateLLM(m, f, category, hw, contextSize)
+	}
+	fit.Quant, fit.File, fit.Category = f.Quant, f.File, category
+	fit.DownloadBytes = f.Size + m.extrasSize()
+	fit.Label = LevelLabel(fit.Level)
+	fit.QualityScore = quality(m, category, f.Quant)
+	fit.FitScore = fitScoreFor(fit.Utilization)
+
+	w := weightsFor(category)
+	fit.Score = w.quality*fit.QualityScore + w.speed*fit.SpeedScore + w.fit*fit.FitScore + w.context*fit.ContextScore
+	if fit.Level == "tight" {
+		fit.Score = fit.Score*0.2 - 100 // always below anything that runs
+	}
+	return fit
+}
+
+func evaluateLLM(m *Model, f File, category string, hw hardware.Info, contextSize int) Fit {
+	const GiB = hardware.GiB
+	weightsGB := float64(f.Size) / GiB
+	extrasGB := float64(m.extrasSize()) / GiB
+	ctx := 0
+	if m.Context > 0 {
+		ctx = min(contextSize, m.Context)
+	}
+	kvGB := m.KVMBPer1K * float64(ctx) / 1024 / 1024
+	required := weightsGB*1.05 + extrasGB + kvGB + 0.35
+
+	active := m.ActiveParamsB
+	if active <= 0 {
+		active = m.ParamsB
+	}
+	// Bytes touched per generated token: MoE only reads the active experts.
+	perToken := weightsGB * active / m.ParamsB
+
+	ram, vram := hw.UsableRAMGB, hw.UsableVRAMGB
+	gpuBW, cpuBW := hw.GPUBandwidthGBps, hw.CPUBandwidthGBps
+
+	var fit Fit
+	capGood := false
+	var pool float64
+	switch {
+	case hw.UnifiedMemory:
+		fit.Mode, pool, fit.TPS = "Metal", ram, gpuBW/perToken*0.55
+	case vram > 0 && required <= vram:
+		fit.Mode, pool, fit.TPS = "GPU", vram, gpuBW/perToken*0.55
+	case vram > 0 && required <= vram+ram:
+		// Partial offload: some layers on the GPU, the rest on the CPU.
+		onGPU := min(max(vram/required, 0), 1)
+		secondsPerToken := perToken*onGPU/gpuBW + perToken*(1-onGPU)/cpuBW
+		fit.Mode, pool, fit.TPS = "GPU+CPU", vram+ram, 0.55/secondsPerToken
+		capGood = true
+	default:
+		fit.Mode, pool, fit.TPS = "CPU", ram, cpuBW/perToken*0.5
+		capGood = true
+	}
+	fit.RequiredGB = required
+	fit.Utilization = utilization(required, pool)
+	fit.Level = levelFor(fit.Utilization)
+	if capGood && fit.Level == "perfect" {
+		fit.Level = "good"
+	}
+
+	w := weightsFor(category)
+	if category == "embedding" {
+		fit.SpeedScore = min(max(100-m.ParamsB*40, 10), 100)
+		fit.SpeedLabel = label(m.ParamsB, [3]float64{0.3, 1, 3}, true)
+		fit.TPS = 0
+	} else {
+		fit.SpeedScore = 100 * (1 - math.Exp(-fit.TPS/w.targetTPS))
+		fit.SpeedLabel = label(fit.TPS, [3]float64{40, 20, 8}, false)
+	}
+	fit.ContextScore = 100
+	if w.targetContext > 0 {
+		fit.ContextScore = min(1, float64(m.Context)/float64(w.targetContext)) * 100
+	}
+	return fit
+}
+
+func utilization(required, pool float64) float64 {
+	if pool <= 0 {
+		return 99
+	}
+	return required / pool
+}
+
+// cpuFactor scales timings calibrated on a 45 GB/s desktop CPU (Ryzen 5 1600, DDR4).
+func cpuFactor(hw hardware.Info) (factor float64, mode string) {
+	if hw.UnifiedMemory {
+		return 45 / hw.GPUBandwidthGBps / 1.5, "Metal"
+	}
+	bw := hw.CPUBandwidthGBps
+	if bw <= 0 {
+		bw = 45
+	}
+	return 45 / bw, "CPU"
+}
+
+// whisperfile runs on the CPU (Metal on Apple Silicon).
+func evaluateWhisper(m *Model, f File, hw hardware.Info) Fit {
+	weightsGB := float64(f.Size) / hardware.GiB
+	factor, mode := cpuFactor(hw)
+	required := weightsGB*1.3 + 0.2
+	fit := Fit{Mode: mode, RequiredGB: required}
+	fit.Utilization = utilization(required, hw.UsableRAMGB)
+	fit.Level = levelFor(fit.Utilization)
+	// Calibrated: whisper base (74M) ≈ 2× realtime on the reference CPU.
+	fit.RealtimeFactor = m.ParamsB * 27 * factor
+	fit.SpeedScore = 100 * math.Exp(-fit.RealtimeFactor/3)
+	fit.SpeedLabel = label(fit.RealtimeFactor, [3]float64{0.5, 1, 3}, true)
+	fit.ContextScore = 100
+	return fit
+}
+
+// EstimateImageSeconds predicts the wall time to generate one image.
+// Calibrated on SD-Turbo 512²: 10 s/step on the reference CPU, TAESD decode 3 s,
+// full VAE decode 48 s.
+func EstimateImageSeconds(m *Model, f File, hw hardware.Info, width, height, steps int, fastDecode bool) float64 {
+	spec := m.Image
+	if spec == nil {
+		return 0
+	}
+	factor, _ := cpuFactor(hw)
+	px := float64(width*height) / (512 * 512)
+	perStep := spec.DiffusionParamsB * 11.6 * px * factor
+	decode := 48 * px * max(spec.VAECost, 1) * factor
+	if fastDecode {
+		decode = 3.2 * px * factor
+	}
+	encode := 0.5
+	totalGB := float64(f.Size+m.extrasSize()) / hardware.GiB
+	for _, c := range m.Components {
+		if c.Role == "llm" || c.Role == "t5xxl" {
+			encode += float64(c.Size) / hardware.GiB * 2 * factor
+		}
+	}
+	load := totalGB / 1.5
+	return float64(steps)*perStep + decode + encode + load
+}
+
+// diffusionfile runs on the CPU (Metal on Apple Silicon).
+func evaluateDiffusion(m *Model, f File, hw hardware.Info) Fit {
+	spec := m.Image
+	_, mode := cpuFactor(hw)
+	totalGB := float64(f.Size+m.extrasSize()) / hardware.GiB
+	px := 1.0
+	steps := 20
+	if spec != nil {
+		px = float64(spec.Width*spec.Height) / (512 * 512)
+		steps = spec.Steps
+	}
+	required := totalGB*1.1 + 0.6*px + 1.2*px // weights + UNet/DiT buffers + VAE buffers
+	fit := Fit{Mode: mode, RequiredGB: required}
+	fit.Utilization = utilization(required, hw.UsableRAMGB)
+	fit.Level = levelFor(fit.Utilization)
+	if spec != nil {
+		fit.SecondsPerImage = EstimateImageSeconds(m, f, hw, spec.Width, spec.Height, steps, hasRole(m, "taesd"))
+	}
+	fit.SpeedScore = 100 * math.Exp(-fit.SecondsPerImage/30)
+	fit.SpeedLabel = label(fit.SecondsPerImage, [3]float64{10, 30, 90}, true)
+	fit.ContextScore = 100
+	return fit
+}
+
+func hasRole(m *Model, role string) bool {
+	for _, c := range m.Components {
+		if c.Role == role {
+			return true
+		}
+	}
+	return false
+}
+
+// EvaluateBest picks the quant with the best score that fits, falling back to
+// the smallest file when nothing fits.
+func EvaluateBest(m *Model, category string, hw hardware.Info, contextSize int) Fit {
+	var best, smallest *Fit
+	var smallestSize int64 = math.MaxInt64
+	for _, f := range m.Files {
+		r := Evaluate(m, f, category, hw, contextSize)
+		if r.Level != "tight" && (best == nil || r.Score > best.Score) {
+			best = &r
+		}
+		if f.Size < smallestSize {
+			smallestSize = f.Size
+			smallest = &r
+		}
+	}
+	if best != nil {
+		return *best
+	}
+	if smallest != nil {
+		return *smallest
+	}
+	return Fit{Level: "tight", Label: LevelLabel("tight"), Category: category}
+}

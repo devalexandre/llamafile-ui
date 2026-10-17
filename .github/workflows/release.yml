@@ -1,0 +1,147 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WAILS_VERSION: v2.16.0
+  NODE_VERSION: "20"
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
+        run: echo "version=0.1.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Linux deps
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Placeholder frontend (go:embed)
+        run: mkdir -p frontend/dist && touch frontend/dist/.gitkeep
+      - run: go vet -tags webkit2_41 ./...
+      - run: go test ./...
+
+  build:
+    needs: [version, test]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-amd64
+            os: ubuntu-24.04
+            platform: linux/amd64
+            tags: webkit2_41
+          - name: windows-amd64
+            os: windows-latest
+            platform: windows/amd64
+          - name: macos-universal
+            os: macos-latest
+            platform: darwin/universal
+    runs-on: ${{ matrix.os }}
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+
+      - name: Linux deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: NSIS + gcc (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) { choco install nsis -y --no-progress }
+          "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Append
+          # The microphone recorder (malgo/miniaudio) needs cgo.
+          if (-not (Get-Command gcc -ErrorAction SilentlyContinue)) { choco install mingw -y --no-progress }
+          "CGO_ENABLED=1" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Build
+        shell: bash
+        run: |
+          ARGS="-clean -platform ${{ matrix.platform }} -ldflags \"-X main.version=${VERSION}\""
+          if [ -n "${{ matrix.tags }}" ]; then ARGS="$ARGS -tags ${{ matrix.tags }}"; fi
+          if [ "${{ runner.os }}" = "Windows" ]; then ARGS="$ARGS -nsis"; fi
+          eval wails build $ARGS
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist
+          cp build/bin/llamafile-ui dist/
+          cp build/appicon.png dist/llamafile-ui.png
+          tar -C dist -czf llamafile-ui-${VERSION}-linux-amd64.tar.gz llamafile-ui llamafile-ui.png
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          APP=$(ls -d build/bin/*.app | head -1)
+          ditto -c -k --keepParent "$APP" "llamafile-ui-${VERSION}-macos-universal.zip"
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cp build/bin/llamafile-ui.exe "llamafile-ui-${VERSION}-windows-amd64.exe"
+          cp build/bin/*-installer.exe "llamafile-ui-${VERSION}-windows-amd64-setup.exe"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: llamafile-ui-${{ matrix.name }}
+          path: |
+            llamafile-ui-*.tar.gz
+            llamafile-ui-*.zip
+            llamafile-ui-*.exe
+          if-no-files-found: error
+
+  release:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Checksums
+        run: cd artifacts && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.version.outputs.version }}
+          name: Llamafile UI v${{ needs.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: artifacts/*
