@@ -142,6 +142,13 @@ func (a *backend) Estimate(req imagegen.Request) float64 {
 	if !ok && len(m.Files) > 0 {
 		f = m.Files[0]
 	}
+	if m.Video != nil {
+		frames := req.Frames
+		if frames <= 1 {
+			frames = m.Video.Frames
+		}
+		return a.calibratedImageSeconds(m, f, catalog.EstimateVideoSeconds(m, f, a.fitHardware(), req.Width, req.Height, frames, req.Steps))
+	}
 	_, hasTAESD := a.catalog.ComponentPaths(req.ModelID)["taesd"]
 	if req.InitImage != "" {
 		// img2img only runs steps × strength denoising steps.

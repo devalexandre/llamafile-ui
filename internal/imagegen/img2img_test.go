@@ -28,3 +28,13 @@ func TestPrepareImg2Img(t *testing.T) {
 		t.Fatal("missing file must fail")
 	}
 }
+
+func TestPrepareVideo(t *testing.T) {
+	req := Request{Video: true, Frames: 30, Width: 832, Height: 480}
+	if err := prepareVideo(&req); err != nil {
+		t.Fatal(err)
+	}
+	if req.Frames != 29 || req.FPS != 16 || req.Width != 832 {
+		t.Fatalf("frames %d fps %d size %dx%d", req.Frames, req.FPS, req.Width, req.Height)
+	}
+}

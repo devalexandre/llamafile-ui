@@ -58,6 +58,8 @@ export const api = {
   transcribeForChat: (path: string) => call<string>(App.TranscribeForChat(path)),
   generateChatImage: (conversationId: string, modelId: string, text: string, reference = "") =>
     call<Conversation>(App.GenerateChatImage(conversationId, modelId, text, reference)),
+  generateChatVideo: (conversationId: string, modelId: string, text: string, reference = "") =>
+    call<Conversation>(App.GenerateChatVideo(conversationId, modelId, text, reference)),
   benchmarkModel: (id: string) => call<BenchResult>(App.BenchmarkModel(id)),
   benchmarks: () => call<BenchRecord[]>(App.GetBenchmarks()),
   resetBenchmarks: () => App.ResetBenchmarks(),

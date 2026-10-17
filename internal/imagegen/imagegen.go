@@ -37,6 +37,12 @@ type Request struct {
 	// InitImage is a reference image to transform (img2img); empty = text-to-image.
 	InitImage string  `json:"initImage"`
 	Strength  float64 `json:"strength"` // how much the reference may change (0..1)
+	// Video generates a clip (Wan models): Frames must be 4n+1. With a
+	// reference image it becomes the first frame (image-to-video).
+	Video  bool   `json:"video"`
+	Frames int    `json:"frames"`
+	FPS    int    `json:"fps"`
+	Format string `json:"format"` // webm (default), webp (animated) or avi
 }
 
 type Image struct {
@@ -56,6 +62,9 @@ type Image struct {
 	CreatedAt  int64   `json:"createdAt"`
 	Reference  string  `json:"reference"` // copy of the reference image (img2img), if any
 	Strength   float64 `json:"strength"`
+	Kind       string  `json:"kind"` // image | video
+	Frames     int     `json:"frames"`
+	FPS        int     `json:"fps"`
 }
 
 type Progress struct {
@@ -124,6 +133,9 @@ func New(db *sql.DB, dir string, backend Backend, events Events) (*Generator, er
 	// Columns added after the first release (errors mean they already exist).
 	_, _ = db.Exec(`ALTER TABLE images ADD COLUMN reference TEXT NOT NULL DEFAULT ''`)
 	_, _ = db.Exec(`ALTER TABLE images ADD COLUMN strength REAL NOT NULL DEFAULT 0`)
+	_, _ = db.Exec(`ALTER TABLE images ADD COLUMN kind TEXT NOT NULL DEFAULT 'image'`)
+	_, _ = db.Exec(`ALTER TABLE images ADD COLUMN frames INTEGER NOT NULL DEFAULT 0`)
+	_, _ = db.Exec(`ALTER TABLE images ADD COLUMN fps INTEGER NOT NULL DEFAULT 0`)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
 	}
@@ -141,11 +153,11 @@ func (g *Generator) Busy() string {
 func (g *Generator) Generate(req Request) (string, error) {
 	req.Prompt = strings.TrimSpace(req.Prompt)
 	if req.Prompt == "" {
-		return "", errors.New("descreva a imagem que você quer gerar")
+		return "", errors.New("descreva o que você quer gerar")
 	}
 	bin := g.backend.Binary()
 	if bin == "" {
-		return "", errors.New("diffusionfile não instalado")
+		return "", errors.New("nenhum motor de imagens instalado")
 	}
 	spec, err := g.backend.Model(req.ModelID)
 	if err != nil {
@@ -158,7 +170,12 @@ func (g *Generator) Generate(req Request) (string, error) {
 	if req.Steps <= 0 {
 		req.Steps = 20
 	}
-	if req.InitImage != "" {
+	switch {
+	case req.Video:
+		if err := prepareVideo(&req); err != nil {
+			return "", err
+		}
+	case req.InitImage != "":
 		if err := PrepareImg2Img(&req); err != nil {
 			return "", err
 		}
@@ -225,18 +242,28 @@ func splitCRLF(data []byte, atEOF bool) (int, []byte, error) {
 }
 
 func (g *Generator) run(ctx context.Context, jobID, bin string, spec ModelSpec, req Request) (Image, error) {
-	name := uuid.NewString() + ".png"
+	ext := ".png"
+	var args []string
+	if req.Video {
+		ext = "." + req.Format
+		// Tiled VAE decode avoids running out of VRAM on 4–8 GB cards.
+		args = []string{"-M", "vid_gen", "--video-frames", strconv.Itoa(req.Frames), "--fps", strconv.Itoa(req.FPS), "--vae-tiling"}
+	}
+	name := uuid.NewString() + ext
 	out := filepath.Join(g.dir, name)
-	args := []string{"--" + spec.MainFlag, spec.MainPath,
+	args = append(args, "--"+spec.MainFlag, spec.MainPath,
 		"-p", req.Prompt, "-W", strconv.Itoa(req.Width), "-H", strconv.Itoa(req.Height),
 		"--steps", strconv.Itoa(req.Steps), "--cfg-scale", strconv.FormatFloat(req.CFG, 'f', -1, 64),
-		"-s", strconv.FormatInt(req.Seed, 10), "-o", out, "-t", strconv.Itoa(tools.Threads())}
+		"-s", strconv.FormatInt(req.Seed, 10), "-o", out, "-t", strconv.Itoa(tools.Threads()))
 	if req.Negative != "" {
 		args = append(args, "-n", req.Negative)
 	}
 	reference := ""
 	if req.InitImage != "" {
-		args = append(args, "-i", req.InitImage, "--strength", strconv.FormatFloat(req.Strength, 'f', 2, 64))
+		args = append(args, "-i", req.InitImage)
+		if !req.Video { // for video the reference is the first frame
+			args = append(args, "--strength", strconv.FormatFloat(req.Strength, 'f', 2, 64))
+		}
 		// Keep a copy so the gallery can show what the image came from.
 		reference = "ref-" + uuid.NewString() + strings.ToLower(filepath.Ext(req.InitImage))
 		if err := copyFile(req.InitImage, filepath.Join(g.dir, reference)); err != nil {
@@ -290,10 +317,11 @@ func (g *Generator) run(ctx context.Context, jobID, bin string, spec ModelSpec, 
 		case strings.Contains(line, "get_learned_condition") || strings.Contains(line, "computing condition"):
 			phase = "encoding"
 			emit(phase, 0, req.Steps)
-		case strings.Contains(line, "generating image:"):
+		case strings.Contains(line, "generating image:") || strings.Contains(line, "generate_video "):
 			phase = "sampling"
 			emit(phase, 0, req.Steps)
-		case strings.Contains(line, "decoding") && strings.Contains(line, "latent"):
+		case strings.Contains(line, "sampling completed") ||
+			(strings.Contains(line, "decoding") && strings.Contains(line, "latent")):
 			phase = "decoding"
 			emit(phase, req.Steps, req.Steps)
 		case strings.Contains(line, "save result"):
@@ -324,13 +352,16 @@ func (g *Generator) run(ctx context.Context, jobID, bin string, spec ModelSpec, 
 
 	img := Image{Prompt: req.Prompt, Negative: req.Negative, ModelID: req.ModelID, ModelName: spec.Name,
 		Width: req.Width, Height: req.Height, Steps: req.Steps, CFG: req.CFG, Seed: req.Seed, Sampler: req.Sampler,
-		File: name, DurationMs: time.Since(started).Milliseconds(), CreatedAt: time.Now().UnixMilli(), Reference: reference}
-	if reference != "" {
+		File: name, DurationMs: time.Since(started).Milliseconds(), CreatedAt: time.Now().UnixMilli(), Reference: reference, Kind: "image"}
+	if reference != "" && !req.Video {
 		img.Strength = req.Strength
 	}
-	res, err := g.db.Exec(`INSERT INTO images (prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at, reference, strength)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, img.Prompt, img.Negative, img.ModelID, img.ModelName, img.Width, img.Height,
-		img.Steps, img.CFG, img.Seed, img.Sampler, img.File, img.DurationMs, img.CreatedAt, img.Reference, img.Strength)
+	if req.Video {
+		img.Kind, img.Frames, img.FPS = "video", req.Frames, req.FPS
+	}
+	res, err := g.db.Exec(`INSERT INTO images (prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at, reference, strength, kind, frames, fps)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, img.Prompt, img.Negative, img.ModelID, img.ModelName, img.Width, img.Height,
+		img.Steps, img.CFG, img.Seed, img.Sampler, img.File, img.DurationMs, img.CreatedAt, img.Reference, img.Strength, img.Kind, img.Frames, img.FPS)
 	if err != nil {
 		return img, err
 	}
@@ -357,7 +388,7 @@ func lastError(lines []string) string {
 }
 
 func (g *Generator) List() ([]Image, error) {
-	rows, err := g.db.Query(`SELECT id, prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at, reference, strength
+	rows, err := g.db.Query(`SELECT id, prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at, reference, strength, kind, frames, fps
 FROM images ORDER BY id DESC`)
 	if err != nil {
 		return nil, err
@@ -367,7 +398,7 @@ FROM images ORDER BY id DESC`)
 	for rows.Next() {
 		var i Image
 		if err := rows.Scan(&i.ID, &i.Prompt, &i.Negative, &i.ModelID, &i.ModelName, &i.Width, &i.Height, &i.Steps,
-			&i.CFG, &i.Seed, &i.Sampler, &i.File, &i.DurationMs, &i.CreatedAt, &i.Reference, &i.Strength); err != nil {
+			&i.CFG, &i.Seed, &i.Sampler, &i.File, &i.DurationMs, &i.CreatedAt, &i.Reference, &i.Strength, &i.Kind, &i.Frames, &i.FPS); err != nil {
 			return nil, err
 		}
 		out = append(out, i)
@@ -377,9 +408,9 @@ FROM images ORDER BY id DESC`)
 
 func (g *Generator) Get(id int64) (Image, error) {
 	var i Image
-	err := g.db.QueryRow(`SELECT id, prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at, reference, strength
+	err := g.db.QueryRow(`SELECT id, prompt, negative, model_id, model_name, width, height, steps, cfg, seed, sampler, file, duration_ms, created_at, reference, strength, kind, frames, fps
 FROM images WHERE id = ?`, id).Scan(&i.ID, &i.Prompt, &i.Negative, &i.ModelID, &i.ModelName, &i.Width, &i.Height, &i.Steps,
-		&i.CFG, &i.Seed, &i.Sampler, &i.File, &i.DurationMs, &i.CreatedAt, &i.Reference, &i.Strength)
+		&i.CFG, &i.Seed, &i.Sampler, &i.File, &i.DurationMs, &i.CreatedAt, &i.Reference, &i.Strength, &i.Kind, &i.Frames, &i.FPS)
 	return i, err
 }
 

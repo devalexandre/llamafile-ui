@@ -56,6 +56,8 @@ func KindOf(m *Model, category string) string {
 	switch {
 	case m.Runtime == RuntimeWhisper:
 		return "voice"
+	case m.Runtime == RuntimeDiffusion && m.Video != nil:
+		return "video"
 	case m.Runtime == RuntimeDiffusion:
 		return "image"
 	case m.Runtime == RuntimePiper:
@@ -82,7 +84,7 @@ func weightsFor(category string) weights {
 		return weights{0.50, 0.20, 0.20, 0.10, 15, 8192}
 	case "image":
 		return weights{0.45, 0.40, 0.15, 0, 0, 0}
-	case "voice":
+	case "voice", "video":
 		return weights{0.45, 0.40, 0.15, 0, 0, 0}
 	case "tts":
 		return weights{0.60, 0.25, 0.15, 0, 0, 0}
@@ -193,7 +195,7 @@ func EvaluateWith(m *Model, f File, category string, hw hardware.Info, contextSi
 				fit.TPS *= c.Ratio
 			case "voice", "tts":
 				fit.RealtimeFactor *= c.Ratio
-			case "image":
+			case "image", "video":
 				fit.SecondsPerImage *= c.Ratio
 			}
 			fit.Measured, fit.Calibrated, fit.Samples = c.Measured, !c.Measured, c.Samples
@@ -283,6 +285,9 @@ func setSpeed(fit *Fit, kind, category string) {
 	case "tts":
 		fit.SpeedScore = 100 * math.Exp(-fit.RealtimeFactor/0.5)
 		fit.SpeedLabel = label(fit.RealtimeFactor, [3]float64{0.2, 0.5, 1}, true)
+	case "video":
+		fit.SpeedScore = 100 * math.Exp(-fit.SecondsPerImage/300)
+		fit.SpeedLabel = label(fit.SecondsPerImage, [3]float64{60, 180, 600}, true)
 	case "image":
 		fit.SpeedScore = 100 * math.Exp(-fit.SecondsPerImage/30)
 		fit.SpeedLabel = label(fit.SecondsPerImage, [3]float64{10, 30, 90}, true)
@@ -364,6 +369,9 @@ func EstimateImageSeconds(m *Model, f File, hw hardware.Info, width, height, ste
 
 // diffusionfile runs on the CPU (Metal on Apple Silicon) unless its build has a GPU backend.
 func evaluateDiffusion(m *Model, f File, hw hardware.Info) Fit {
+	if m.Video != nil {
+		return evaluateVideo(m, f, hw)
+	}
 	spec := m.Image
 	totalGB := float64(f.Size+m.extrasSize()) / hardware.GiB
 	px := 1.0
@@ -438,4 +446,62 @@ func evaluateTTS(f File, hw hardware.Info) Fit {
 	setSpeed(&fit, "tts", "tts")
 	fit.ContextScore = 100
 	return fit
+}
+
+// videoGPUGB is what must fit in VRAM for a video model: the diffusion model
+// and the VAE. stable-diffusion.cpp keeps the big text encoder (umt5) in RAM
+// when the GPU is short of memory, and it only runs once per video.
+func videoGPUGB(m *Model, f File) float64 {
+	gb := float64(f.Size) / hardware.GiB
+	for _, c := range m.Components {
+		if c.Role == "vae" {
+			gb += float64(c.Size) / hardware.GiB
+		}
+	}
+	return gb*1.15 + 1
+}
+
+// evaluateVideo estimates a Wan video model at its default size and length.
+func evaluateVideo(m *Model, f File, hw hardware.Info) Fit {
+	spec := m.Image
+	gpuGB := videoGPUGB(m, f)
+	_, mode, _ := toolFactor(hw, hw.DiffusionGPU, gpuGB)
+	totalGB := float64(f.Size+m.extrasSize())/hardware.GiB*1.1 + 1.5
+	fit := Fit{Mode: mode, RequiredGB: totalGB}
+	if mode == "GPU" {
+		// VRAM holds the diffusion model; the text encoder goes to RAM.
+		fit.Utilization = max(utilization(gpuGB, hw.UsableVRAMGB), utilization(totalGB-gpuGB, hw.UsableRAMGB))
+	} else {
+		fit.Utilization = utilization(totalGB, hw.UsableRAMGB)
+	}
+	fit.Level = levelFor(fit.Utilization)
+	if spec != nil && m.Video != nil {
+		fit.SecondsPerImage = EstimateVideoSeconds(m, f, hw, spec.Width, spec.Height, m.Video.Frames, spec.Steps)
+	}
+	setSpeed(&fit, "video", "video")
+	fit.ContextScore = 100
+	return fit
+}
+
+// EstimateVideoSeconds predicts the wall time of one video. The Wan VAE
+// compresses 4 frames into one latent frame; cost grows with pixels × latent
+// frames. Calibrated afterwards by real runs (bench).
+func EstimateVideoSeconds(m *Model, f File, hw hardware.Info, width, height, frames, steps int) float64 {
+	spec := m.Image
+	if spec == nil {
+		return 0
+	}
+	factor, _, _ := toolFactor(hw, hw.DiffusionGPU, videoGPUGB(m, f))
+	px := float64(width*height) / (512 * 512)
+	latentFrames := float64((max(frames, 1)-1)/4 + 1)
+	perStep := spec.DiffusionParamsB * 11.6 * px * latentFrames * 0.6 * factor
+	decode := 15 * px * latentFrames * max(spec.VAECost, 1) * factor
+	encode := 1.0
+	for _, c := range m.Components {
+		if c.Role == "t5xxl" {
+			encode += float64(c.Size) / hardware.GiB * 6 // umt5 weights stay in RAM
+		}
+	}
+	load := float64(f.Size+m.extrasSize()) / hardware.GiB / 1.5
+	return float64(steps)*perStep + decode + encode + load
 }

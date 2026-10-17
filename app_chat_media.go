@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/devalexandre/llamafile-ui/internal/catalog"
 	"github.com/devalexandre/llamafile-ui/internal/chat"
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
@@ -96,6 +97,11 @@ func (a *App) TranscribeForChat(path string) (string, error) {
 
 var imageIntentRe = regexp.MustCompile(`(?i)^\s*(por favor,?\s*)?(crie|cria|criar|gere|gera|gerar|desenhe|desenha|fa[çc]a|faz|pinte|ilustre|create|generate|draw|make|paint)\b.{0,40}?\b(imagem|imagens|foto|fotografia|ilustra[çc][ãa]o|desenho|pintura|arte|logo|image|picture|photo|illustration|drawing|painting)\b`)
 
+var videoIntentRe = regexp.MustCompile(`(?i)\b(v[ií]deo|anima[çc][ãa]o|clipe|video|animation|clip)\b|^\s*(anime|animate)\b`)
+
+// WantsVideo reports whether a chat message asks for a video ("crie um vídeo de…", "anime esta imagem").
+func (a *App) WantsVideo(text string) bool { return videoIntentRe.MatchString(text) }
+
 // WantsImage reports whether a chat message asks for an image ("crie uma imagem de…").
 func (a *App) WantsImage(text string) bool { return imageIntentRe.MatchString(text) }
 
@@ -103,21 +109,50 @@ type chatImageJob struct {
 	conversationID string
 	message        chat.Message
 	model          string
+	video          bool
 }
 
 // GenerateChatImage answers a chat message with an image: the request and the
 // result stay in the conversation, and the image also goes to the Images page.
 // reference is an optional attached image to transform (img2img).
 func (a *App) GenerateChatImage(conversationID, chatModelID, text, reference string) (chat.Conversation, error) {
+	return a.generateChatMedia(conversationID, chatModelID, text, reference, false)
+}
+
+// GenerateChatVideo answers with a short video; with a reference image
+// attached, the video starts from it (image-to-video).
+func (a *App) GenerateChatVideo(conversationID, chatModelID, text, reference string) (chat.Conversation, error) {
+	return a.generateChatMedia(conversationID, chatModelID, text, reference, true)
+}
+
+func (a *App) generateChatMedia(conversationID, chatModelID, text, reference string, video bool) (chat.Conversation, error) {
 	text = strings.TrimSpace(text)
 	if text == "" {
-		return chat.Conversation{}, errors.New("descreva a imagem que você quer")
+		return chat.Conversation{}, errors.New("descreva o que você quer gerar")
 	}
 	if bin, _ := a.imageBinary(); bin == "" {
 		return chat.Conversation{}, errors.New("instale um motor de imagens em Configurações → Ferramentas para gerar imagens")
 	}
 	models := a.installedFor("image", a.settings.Get().ImageModelID)
+	if video {
+		models = a.installedFor("video", a.settings.Get().VideoModelID)
+		if reference != "" { // only image-to-video models can start from a picture
+			var i2v []catalog.View
+			for _, m := range models {
+				if m.Video != nil && m.Video.ImageInput {
+					i2v = append(i2v, m)
+				}
+			}
+			if len(models) > 0 && len(i2v) == 0 {
+				return chat.Conversation{}, errors.New("para animar uma imagem, baixe o Wan 2.2 5B Turbo em Descobrir → Vídeos")
+			}
+			models = i2v
+		}
+	}
 	if len(models) == 0 {
+		if video {
+			return chat.Conversation{}, errors.New("baixe um modelo de vídeo em Descobrir → Vídeos")
+		}
 		return chat.Conversation{}, errors.New("baixe um modelo de imagem em Descobrir → Imagens")
 	}
 	if a.images.Busy() != "" {
@@ -186,15 +221,19 @@ func (a *App) GenerateChatImage(conversationID, chatModelID, text, reference str
 			return
 		}
 		_, taesd := a.catalog.ComponentPaths(img.ID)["taesd"]
-		job, err := a.images.Generate(imagegen.Request{ModelID: img.ID, Prompt: prompt, Width: spec.Width, Height: spec.Height,
+		req := imagegen.Request{ModelID: img.ID, Prompt: prompt, Width: spec.Width, Height: spec.Height,
 			Steps: spec.Steps, CFG: spec.CFG, Sampler: spec.Sampler, Seed: -1, FastDecode: a.settings.Get().FastDecode && taesd,
-			InitImage: a.referencePath(reference)})
+			InitImage: a.referencePath(reference)}
+		if video && img.Video != nil {
+			req.Video, req.Frames, req.FPS, req.Format = true, img.Video.Frames, img.Video.FPS, "webm"
+		}
+		job, err := a.images.Generate(req)
 		if err != nil {
 			fail(err)
 			return
 		}
 		a.mu.Lock()
-		a.chatImages[job] = chatImageJob{conversationID: conv.ID, message: reply, model: img.Name}
+		a.chatImages[job] = chatImageJob{conversationID: conv.ID, message: reply, model: img.Name, video: video}
 		a.mu.Unlock()
 	}()
 	return conv, nil
@@ -221,7 +260,11 @@ func (a *App) chatImageFinished(jobID string, img *imagegen.Image, errMsg string
 			break
 		}
 		m.Attachments = []string{name}
-		m.Content = fmt.Sprintf("Imagem gerada com %s em %.0f s.\n\n*Prompt:* %s", job.model, float64(img.DurationMs)/1000, img.Prompt)
+		what := "Imagem gerada"
+		if job.video {
+			what = fmt.Sprintf("Vídeo de %.1f s gerado", float64(img.Frames)/float64(max(img.FPS, 1)))
+		}
+		m.Content = fmt.Sprintf("%s com %s em %s.\n\n*Prompt:* %s", what, job.model, humanDuration(float64(img.DurationMs)/1000), img.Prompt)
 	case errMsg == "":
 		m.Error = "geração cancelada"
 	default:
@@ -250,4 +293,12 @@ func (a *App) stopChatImage(conversationID string) bool {
 		}
 	}
 	return false
+}
+
+// humanDuration formats seconds as "45 s" or "3 min 20 s".
+func humanDuration(sec float64) string {
+	if sec < 60 {
+		return fmt.Sprintf("%.0f s", sec)
+	}
+	return fmt.Sprintf("%d min %02d s", int(sec)/60, int(sec)%60)
 }

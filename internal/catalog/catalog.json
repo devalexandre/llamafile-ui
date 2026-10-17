@@ -1607,6 +1607,150 @@
    "tts": {
     "language": "es-ES"
    }
+  },
+  {
+   "id": "wan21-t2v-1.3b",
+   "name": "Wan 2.1 1.3B",
+   "publisher": "Alibaba (Wan-AI)",
+   "params_b": 1.3,
+   "active_params_b": 1.3,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "video"
+   ],
+   "quality": {
+    "video": 62
+   },
+   "runtime": "diffusionfile",
+   "repo": "samuelchristlie/Wan2.1-T2V-1.3B-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "texto → vídeo",
+    "leve"
+   ],
+   "description": "Vídeos curtos a partir de texto. O menor modelo de vídeo bom: cabe em GPUs de 4–6 GB.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Wan2.1-T2V-1.3B-Q4_K_M.gguf",
+     "url": "https://huggingface.co/samuelchristlie/Wan2.1-T2V-1.3B-GGUF/resolve/main/Wan2.1-T2V-1.3B-Q4_K_M.gguf",
+     "size": 982716640
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Wan2.1-T2V-1.3B-Q8_0.gguf",
+     "url": "https://huggingface.co/samuelchristlie/Wan2.1-T2V-1.3B-GGUF/resolve/main/Wan2.1-T2V-1.3B-Q8_0.gguf",
+     "size": 1535768800
+    }
+   ],
+   "components": [
+    {
+     "role": "t5xxl",
+     "file": "umt5-xxl-encoder-Q4_K_M.gguf",
+     "url": "https://huggingface.co/city96/umt5-xxl-encoder-gguf/resolve/main/umt5-xxl-encoder-Q4_K_M.gguf",
+     "size": 3655145312
+    },
+    {
+     "role": "vae",
+     "file": "wan_2.1_vae.safetensors",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors",
+     "size": 253815318
+    }
+   ],
+   "image": {
+    "main_flag": "diffusion-model",
+    "steps": 20,
+    "cfg": 6,
+    "width": 480,
+    "height": 272,
+    "sampler": "euler",
+    "diffusion_params_b": 1.3,
+    "vae_cost": 1,
+    "args": [
+     "--flow-shift",
+     "3"
+    ]
+   },
+   "video": {
+    "frames": 33,
+    "fps": 16,
+    "image_input": false
+   }
+  },
+  {
+   "id": "wan22-ti2v-5b-turbo",
+   "name": "Wan 2.2 5B Turbo",
+   "publisher": "Alibaba (Wan-AI)",
+   "params_b": 5,
+   "active_params_b": 5,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "video"
+   ],
+   "quality": {
+    "video": 74
+   },
+   "runtime": "diffusionfile",
+   "repo": "hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "texto → vídeo",
+    "imagem → vídeo",
+    "4 passos"
+   ],
+   "description": "Gera vídeo a partir de texto ou anima uma imagem de referência. Versão Turbo: só 4 passos.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Wan2_2-TI2V-5B-Turbo-Q4_K_M.gguf",
+     "url": "https://huggingface.co/hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF/resolve/main/Wan2_2-TI2V-5B-Turbo-Q4_K_M.gguf",
+     "size": 3437927136
+    },
+    {
+     "quant": "Q3_K_M",
+     "file": "Wan2_2-TI2V-5B-Turbo-Q3_K_M.gguf",
+     "url": "https://huggingface.co/hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF/resolve/main/Wan2_2-TI2V-5B-Turbo-Q3_K_M.gguf",
+     "size": 2552601312
+    },
+    {
+     "quant": "Q5_K_S",
+     "file": "Wan2_2-TI2V-5B-Turbo-Q5_K_S.gguf",
+     "url": "https://huggingface.co/hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF/resolve/main/Wan2_2-TI2V-5B-Turbo-Q5_K_S.gguf",
+     "size": 3564739296
+    }
+   ],
+   "components": [
+    {
+     "role": "t5xxl",
+     "file": "umt5-xxl-encoder-Q4_K_M.gguf",
+     "url": "https://huggingface.co/city96/umt5-xxl-encoder-gguf/resolve/main/umt5-xxl-encoder-Q4_K_M.gguf",
+     "size": 3655145312
+    },
+    {
+     "role": "vae",
+     "file": "wan2.2_vae.safetensors",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan2.2_vae.safetensors",
+     "size": 1409400960
+    }
+   ],
+   "image": {
+    "main_flag": "diffusion-model",
+    "steps": 4,
+    "cfg": 1,
+    "width": 640,
+    "height": 352,
+    "sampler": "euler",
+    "diffusion_params_b": 2.5,
+    "vae_cost": 1.5,
+    "args": []
+   },
+   "video": {
+    "frames": 49,
+    "fps": 24,
+    "image_input": true
+   }
   }
  ],
  "version": 2

@@ -4,6 +4,7 @@ import {
   Copy,
   Dices,
   Download,
+  Film,
   ImagePlus,
   ImageUp,
   Loader2,
@@ -27,7 +28,24 @@ const sizes = [
   { value: "square", label: "Quadrado", w: 1, h: 1 },
   { value: "portrait", label: "Retrato", w: 2, h: 3 },
   { value: "landscape", label: "Paisagem", w: 3, h: 2 },
+  { value: "wide", label: "16:9", w: 16, h: 9 },
 ] as const;
+
+/** Video durations offered (seconds); models were trained on clips up to ~5 s. */
+const durations = [1, 2, 3, 5];
+
+/** Generated media: still image, playable video, or a file the webview cannot play (AVI). */
+function Media({ img, className, controls }: { img: ImageItem; className?: string; controls?: boolean }) {
+  if (img.kind !== "video" || img.file.endsWith(".webp")) return <img src={imageURL(img.file)} loading="lazy" className={className} />;
+  if (img.file.endsWith(".webm"))
+    return <video src={imageURL(img.file)} className={className} muted={!controls} controls={controls} autoPlay loop playsInline />;
+  return (
+    <div className={clsx("flex flex-col items-center justify-center gap-1 bg-field text-[12px] text-muted", className)}>
+      <Film className="size-8" />
+      Vídeo AVI — use “Salvar como…”
+    </div>
+  );
+}
 
 export const phaseLabel: Record<ImageProgress["phase"], string> = {
   loading: "Carregando o modelo…",
@@ -66,7 +84,7 @@ function Lightbox({
   return (
     <Sheet open onClose={onClose} width={860}>
       <div className="flex gap-5">
-        <img src={imageURL(img.file)} className="max-h-[70vh] w-[520px] rounded-lg border border-line object-contain" />
+        <Media img={img} controls className="max-h-[70vh] w-[520px] rounded-lg border border-line object-contain" />
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-start justify-between gap-2">
             <div className="text-[13px] font-semibold">Detalhes</div>
@@ -89,6 +107,14 @@ function Lightbox({
             </dd>
             <dt className="text-muted">Seed</dt>
             <dd className="selectable">{img.seed}</dd>
+            {img.kind === "video" && (
+              <>
+                <dt className="text-muted">Duração</dt>
+                <dd>
+                  {(img.frames / Math.max(img.fps, 1)).toFixed(1)} s · {img.frames} quadros · {img.fps} fps
+                </dd>
+              </>
+            )}
             <dt className="text-muted">Tempo</dt>
             <dd>{duration(img.durationMs / 1000)}</dd>
           </dl>
@@ -157,14 +183,16 @@ function Lightbox({
   );
 }
 
-function Generator() {
+function Generator({ video }: { video: boolean }) {
   const app = useApp();
-  const models = app.imageModels;
+  const models = video ? app.videoModels : app.imageModels;
   const [modelId, setModelId] = useState(models[0]?.id ?? "");
   const [defaults, setDefaults] = useState<ImageDefaults | null>(null);
   const [prompt, setPrompt] = useState("");
   const [negative, setNegative] = useState("");
-  const [shape, setShape] = useState<string>("square");
+  const [shape, setShape] = useState<string>(video ? "wide" : "square");
+  const [seconds, setSeconds] = useState(2);
+  const [format, setFormat] = useState<ImageRequest["format"]>("webm");
   const [base, setBase] = useState(512);
   const [steps, setSteps] = useState(1);
   const [cfg, setCfg] = useState(1);
@@ -216,6 +244,10 @@ function Generator() {
       setSteps(d.steps);
       setCfg(d.cfg);
       setBase(Math.max(d.width, d.height));
+      if (d.video) {
+        setShape(d.width > d.height ? "wide" : "square");
+        setSeconds(Math.max(1, Math.round((d.frames - 1) / Math.max(d.fps, 1))));
+      }
     });
   }, [modelId]);
 
@@ -231,9 +263,14 @@ function Generator() {
       sampler: defaults?.sampler ?? "",
       fastDecode,
       initImage: reference,
-      strength: reference ? strength : 0,
+      strength: reference && !video ? strength : 0,
+      video,
+      fps: defaults?.fps ?? 16,
+      // Wan models need 4n+1 frames.
+      frames: video ? Math.round((seconds * (defaults?.fps ?? 16)) / 4) * 4 + 1 : 0,
+      format,
     }),
-    [modelId, prompt, negative, size.width, size.height, steps, cfg, seed, defaults?.sampler, fastDecode, reference, strength], // eslint-disable-line react-hooks/exhaustive-deps
+    [modelId, prompt, negative, size.width, size.height, steps, cfg, seed, defaults?.sampler, fastDecode, reference, strength, video, seconds, format, defaults?.fps], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   useEffect(() => {
@@ -332,20 +369,24 @@ function Generator() {
             </Button>
           </div>
         </div>
-        <div>
-          <div className="mb-1.5 text-[12px] font-semibold text-muted">Imagem de referência (opcional)</div>
+        <div className={clsx(video && !defaults?.imageInput && "hidden")}>
+          <div className="mb-1.5 text-[12px] font-semibold text-muted">
+            {video ? "Primeiro quadro (opcional)" : "Imagem de referência (opcional)"}
+          </div>
           {reference ? (
             <div className="rounded-[10px] border border-line bg-card p-2.5">
               <div className="flex items-start gap-2.5">
                 <img src={attachmentURL(reference)} className="size-16 rounded-md border border-line object-cover" />
                 <div className="min-w-0 flex-1 text-[11.5px] text-muted">
-                  O modelo vai alterar esta imagem seguindo a descrição, mantendo a composição e a proporção.
+                  {video
+                    ? "O vídeo começa nesta imagem e a anima seguindo a descrição."
+                    : "O modelo vai alterar esta imagem seguindo a descrição, mantendo a composição e a proporção."}
                 </div>
                 <IconButton title="Remover referência" onClick={() => setReference("")}>
                   <X className="size-4" />
                 </IconButton>
               </div>
-              <label className="mt-2 flex items-center gap-2 text-[12px]">
+              <label className={clsx("mt-2 flex items-center gap-2 text-[12px]", video && "hidden")}>
                 <span className="w-20 text-muted">Intensidade</span>
                 <input
                   type="range"
@@ -358,7 +399,7 @@ function Generator() {
                 />
                 <span className="w-9 text-right tabular-nums">{Math.round(strength * 100)}%</span>
               </label>
-              <p className="mt-1 text-[11px] text-faint">Baixa: pequenos ajustes. Alta: muda quase tudo.</p>
+              {!video && <p className="mt-1 text-[11px] text-faint">Baixa: pequenos ajustes. Alta: muda quase tudo.</p>}
             </div>
           ) : (
             <div
@@ -395,15 +436,32 @@ function Generator() {
             />
           </div>
         )}
+        {video && (
+          <div>
+            <div className="mb-1.5 text-[12px] font-semibold text-muted">Duração</div>
+            <Segmented
+              value={String(seconds)}
+              onChange={(v) => setSeconds(Number(v))}
+              options={durations.map((d) => ({ value: String(d), label: `${d} s` }))}
+            />
+            <p className="mt-1.5 text-[11px] text-faint">
+              {request.frames} quadros a {request.fps} fps. Os modelos foram treinados com até ~5 s; mais que isso perde coerência.
+            </p>
+          </div>
+        )}
         <div className={clsx(reference && "hidden")}>
-          <div className="mb-1.5 text-[12px] font-semibold text-muted">Formato</div>
-          <Segmented value={shape} onChange={setShape} options={sizes.map((s) => ({ value: s.value, label: s.label }))} />
+          <div className="mb-1.5 text-[12px] font-semibold text-muted">Proporção</div>
+          <Segmented
+            value={shape}
+            onChange={setShape}
+            options={sizes.filter((s) => video || s.value !== "wide").map((s) => ({ value: s.value, label: s.label }))}
+          />
           <div className="mt-2 flex items-center gap-2 text-[12px] text-muted">
             Tamanho
             <Segmented
               value={String(base)}
               onChange={(v) => setBase(Number(v))}
-              options={[512, 768, 1024].map((n) => ({ value: String(n), label: String(n) }))}
+              options={(video ? [480, 640, 832] : [512, 768, 1024]).map((n) => ({ value: String(n), label: String(n) }))}
             />
             <span className="tabular-nums">
               {size.width}×{size.height}
@@ -411,6 +469,20 @@ function Generator() {
           </div>
         </div>
 
+        {video && (
+          <div>
+            <div className="mb-1.5 text-[12px] font-semibold text-muted">Formato do arquivo</div>
+            <Segmented
+              value={format}
+              onChange={(v) => setFormat(v as ImageRequest["format"])}
+              options={[
+                { value: "webm", label: "WebM" },
+                { value: "webp", label: "WebP animado" },
+                { value: "avi", label: "AVI" },
+              ]}
+            />
+          </div>
+        )}
         <button onClick={() => setAdvanced((a) => !a)} className="flex items-center gap-1 text-[12px] font-semibold text-muted hover:text-fg">
           <ChevronDown className={clsx("size-3.5 transition-transform", !advanced && "-rotate-90")} /> Avançado
         </button>
@@ -467,7 +539,7 @@ function Generator() {
               <div className="mb-2 flex items-center justify-between text-[12.5px]">
                 <span className="flex items-center gap-1.5 font-medium">
                   <Loader2 className="size-3.5 animate-spin text-accent" />
-                  {progress ? phaseLabel[progress.phase] : "Iniciando…"}
+                  {progress ? (video && progress.phase === "sampling" ? "Gerando o vídeo…" : phaseLabel[progress.phase]) : "Iniciando…"}
                 </span>
                 {progress?.phase === "sampling" && progress.steps > 1 && (
                   <span className="text-muted tabular-nums">
@@ -489,7 +561,7 @@ function Generator() {
           ) : (
             <>
               <Button variant="primary" className="w-full" icon={<Wand2 className="size-4" />} disabled={!prompt.trim() || !modelId} onClick={generate}>
-                {reference ? "Transformar imagem" : "Gerar imagem"}
+                {video ? (reference ? "Animar imagem" : "Gerar vídeo") : reference ? "Transformar imagem" : "Gerar imagem"}
               </Button>
               <p className="mt-1.5 text-center text-[11px] text-muted">
                 {estimate > 0 && `Estimativa: ~${duration(estimate)} neste computador · `}Ctrl+Enter
@@ -527,7 +599,12 @@ function Generator() {
             {images.map((img) => (
               <div key={img.id} className="group relative overflow-hidden rounded-xl border border-line bg-field">
                 <button onClick={() => setOpen(img)} className="block w-full">
-                  <img src={imageURL(img.file)} loading="lazy" className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]" />
+                  <Media img={img} className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]" />
+                  {img.kind === "video" && (
+                    <span className="absolute top-2 left-2 flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[10.5px] font-medium text-white">
+                      <Film className="size-3" /> {(img.frames / Math.max(img.fps, 1)).toFixed(1)} s
+                    </span>
+                  )}
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2.5 pt-6 pb-2 text-left text-[11.5px] text-white opacity-0 transition-opacity group-hover:opacity-100">
                     <div className="line-clamp-2">{img.prompt}</div>
                   </div>
@@ -577,18 +654,34 @@ function Generator() {
 
 export function ImagesPage() {
   const app = useApp();
+  const [mode, setMode] = useState<"image" | "video">("image");
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col bg-bg">
-      <header className="drag flex h-[52px] shrink-0 items-center border-b border-line px-6">
-        <h1 className="text-[14px] font-semibold">Imagens</h1>
+      <header className="drag flex h-[52px] shrink-0 items-center gap-4 border-b border-line px-6">
+        <h1 className="text-[14px] font-semibold">Imagens e vídeos</h1>
+        <div className="no-drag">
+          <Segmented
+            value={mode}
+            onChange={(v) => setMode(v as "image" | "video")}
+            options={[
+              { value: "image", label: "Imagem" },
+              { value: "video", label: "Vídeo" },
+            ]}
+          />
+        </div>
       </header>
       <ToolGate
         tool="diffusionfile"
         alternative={{ tool: "sd-cpp", label: "Baixar versão com GPU" }}
         icon={<ImagePlus className="size-6" />}
       >
-        <ModelGate category="image" models={app.imageModels} icon={<ImagePlus className="size-6" />}>
-          <Generator />
+        <ModelGate
+          key={mode}
+          category={mode}
+          models={mode === "video" ? app.videoModels : app.imageModels}
+          icon={mode === "video" ? <Film className="size-6" /> : <ImagePlus className="size-6" />}
+        >
+          <Generator key={mode} video={mode === "video"} />
         </ModelGate>
       </ToolGate>
     </div>

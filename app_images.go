@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +25,11 @@ type ImageDefaults struct {
 	Sampler  string  `json:"sampler"`
 	Negative bool    `json:"negative"` // model benefits from a negative prompt
 	TAESD    bool    `json:"taesd"`
+	// Video models only.
+	Video      bool `json:"video"`
+	Frames     int  `json:"frames"`
+	FPS        int  `json:"fps"`
+	ImageInput bool `json:"imageInput"` // can animate a reference image
 }
 
 func (a *App) GetImageDefaults(modelID string) (ImageDefaults, error) {
@@ -32,24 +38,45 @@ func (a *App) GetImageDefaults(modelID string) (ImageDefaults, error) {
 		return ImageDefaults{}, errors.New("modelo de imagem desconhecido")
 	}
 	_, taesd := a.catalog.ComponentPaths(modelID)["taesd"]
-	return ImageDefaults{Steps: m.Image.Steps, CFG: m.Image.CFG, Width: m.Image.Width, Height: m.Image.Height,
-		Sampler: m.Image.Sampler, Negative: m.Image.CFG > 1, TAESD: taesd}, nil
+	d := ImageDefaults{Steps: m.Image.Steps, CFG: m.Image.CFG, Width: m.Image.Width, Height: m.Image.Height,
+		Sampler: m.Image.Sampler, Negative: m.Image.CFG > 1, TAESD: taesd}
+	if m.Video != nil {
+		d.Video, d.Frames, d.FPS, d.ImageInput = true, m.Video.Frames, m.Video.FPS, m.Video.ImageInput
+	}
+	return d, nil
 }
 
 func (a *App) EstimateImage(req imagegen.Request) float64 { return (&backend{a}).Estimate(req) }
 
 func (a *App) GenerateImage(req imagegen.Request) (string, error) {
+	category, chosen := "image", a.settings.Get().ImageModelID
+	if req.Video {
+		category, chosen = "video", a.settings.Get().VideoModelID
+	}
 	if req.ModelID == "" {
-		list := a.installedFor("image", a.settings.Get().ImageModelID)
+		list := a.installedFor(category, chosen)
 		if len(list) == 0 {
+			if req.Video {
+				return "", errors.New("baixe um modelo de vídeo em Descobrir → Vídeos")
+			}
 			return "", errors.New("baixe um modelo de imagem em Descobrir → Imagens")
 		}
 		req.ModelID = list[0].ID
 	}
+	if m := a.catalog.Find(req.ModelID); m != nil {
+		req.Video = m.Video != nil // the model decides
+		if req.Video && req.InitImage != "" && !m.Video.ImageInput {
+			return "", fmt.Errorf("%s não usa imagem de referência; escolha o Wan 2.2 5B Turbo para animar uma imagem", m.Name)
+		}
+	}
 	req.InitImage = a.referencePath(req.InitImage)
 	_ = a.updateSettings(func(s *settings.Settings) {
-		s.ImageModelID = req.ModelID
-		s.FastDecode = req.FastDecode
+		if req.Video {
+			s.VideoModelID = req.ModelID
+		} else {
+			s.ImageModelID = req.ModelID
+			s.FastDecode = req.FastDecode
+		}
 	})
 	return a.images.Generate(req)
 }

@@ -56,6 +56,7 @@ type sourceModel struct {
 	Image         json.RawMessage    `json:"image,omitempty"`
 	Embed         json.RawMessage    `json:"embed,omitempty"`
 	TTS           json.RawMessage    `json:"tts,omitempty"`
+	Video         json.RawMessage    `json:"video,omitempty"`
 }
 
 type file struct {
@@ -87,6 +88,7 @@ type model struct {
 	Image         json.RawMessage    `json:"image,omitempty"`
 	Embed         json.RawMessage    `json:"embed,omitempty"`
 	TTS           json.RawMessage    `json:"tts,omitempty"`
+	Video         json.RawMessage    `json:"video,omitempty"`
 }
 
 type treeEntry struct {
@@ -178,7 +180,7 @@ func main() {
 			ID: s.ID, Name: s.Name, Publisher: s.Publisher, ParamsB: s.ParamsB, ActiveParamsB: s.ActiveParamsB,
 			Context: s.Context, KVMBPer1K: s.KVMBPer1K, Categories: s.Categories, Quality: s.Quality,
 			Runtime: s.Runtime, Repo: s.Repo, License: s.License, Tags: s.Tags, Description: s.Description,
-			Image: s.Image, Embed: s.Embed, TTS: s.TTS,
+			Image: s.Image, Embed: s.Embed, TTS: s.TTS, Video: s.Video,
 		}
 		if m.Runtime == "" {
 			m.Runtime = "llamafile"

@@ -46,6 +46,13 @@ type ImageSpec struct {
 	Args             []string `json:"args,omitempty"`
 }
 
+// VideoSpec holds the defaults of a video model (Wan) run with vid_gen.
+type VideoSpec struct {
+	Frames     int  `json:"frames"`      // 4n+1
+	FPS        int  `json:"fps"`         // playback rate
+	ImageInput bool `json:"image_input"` // accepts a first-frame reference image (I2V)
+}
+
 // TTSSpec describes a Piper voice.
 type TTSSpec struct {
 	Language string `json:"language"` // BCP 47, e.g. "pt-BR"
@@ -78,6 +85,7 @@ type Model struct {
 	Image         *ImageSpec         `json:"image,omitempty"`
 	Embed         *EmbedSpec         `json:"embed,omitempty"`
 	TTS           *TTSSpec           `json:"tts,omitempty"`
+	Video         *VideoSpec         `json:"video,omitempty"`
 }
 
 // HasCategory reports whether the model belongs to category.
@@ -126,6 +134,7 @@ var Categories = []Category{
 	{"reasoning", "Raciocínio", "Lógica, matemática e problemas passo a passo"},
 	{"vision", "Visão", "Entendem imagens, capturas de tela e documentos"},
 	{"image", "Imagens", "Geram imagens a partir de texto"},
+	{"video", "Vídeos", "Geram vídeos curtos a partir de texto ou de uma imagem"},
 	{"voice", "Voz", "Transcrição de áudio com Whisper"},
 	{"embedding", "Embeddings", "Busca semântica nos seus documentos"},
 	{"tts", "Leitura em voz alta", "Vozes para ouvir as respostas do chat (Piper)"},

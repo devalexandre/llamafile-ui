@@ -64,6 +64,11 @@ func (a *App) observeImage(img imagegen.Image) {
 	if !ok {
 		return
 	}
+	if img.Kind == "video" {
+		est := catalog.EstimateVideoSeconds(m, f, a.fitHardware(), img.Width, img.Height, img.Frames, img.Steps)
+		a.observe(m, f, "video", fit.Mode, float64(img.DurationMs)/1000, est, 0)
+		return
+	}
 	_, hasTAESD := a.catalog.ComponentPaths(img.ModelID)["taesd"]
 	est := catalog.EstimateImageSeconds(m, f, a.fitHardware(), img.Width, img.Height, img.Steps, a.settings.Get().FastDecode && hasTAESD)
 	a.observe(m, f, "image", fit.Mode, float64(img.DurationMs)/1000, est, 0)
@@ -81,7 +86,7 @@ func (a *App) observeTranscription(modelID string, audioSeconds float64, took ti
 // calibratedImageSeconds applies this machine's measurements to an image estimate.
 func (a *App) calibratedImageSeconds(m *catalog.Model, f catalog.File, seconds float64) float64 {
 	fit := catalog.Evaluate(m, f, "image", a.fitHardware(), a.ctxSize())
-	if c, ok := a.bench.Calibrator()(m.ID, f.Quant, "image", fit.Mode); ok && c.Ratio > 0 {
+	if c, ok := a.bench.Calibrator()(m.ID, f.Quant, catalog.KindOf(m, ""), fit.Mode); ok && c.Ratio > 0 {
 		return seconds * c.Ratio
 	}
 	return seconds

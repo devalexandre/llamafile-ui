@@ -63,6 +63,15 @@ GPU — Vulkan no Linux e no Windows (NVIDIA, AMD e Intel), Metal no Mac com App
 os mesmos modelos; no modo *Automático* o app passa a usá-lo assim que é instalado. Numa RTX 2060
 o SD-Turbo cai de ~20 s para ~2 s por imagem.
 
+### 🎬 Vídeos
+Na mesma página (chave **Imagem / Vídeo**) ou no chat ("crie um vídeo de…", *+ → Gerar vídeo*):
+- **Wan 2.1 1.3B** — texto → vídeo, leve.
+- **Wan 2.2 5B Turbo** — texto → vídeo ou **anima uma imagem de referência** (primeiro quadro), em 4 passos.
+
+Duração de 1 a 5 s (os modelos foram treinados com clipes de até ~5 s), proporção e resolução
+(480 a 832), passos e formato do arquivo (WebM, WebP animado ou AVI). Vídeo exige bem mais
+memória: use o stable-diffusion.cpp com GPU. Numa RTX 2060, 2 s em 480p levam de 2 a 3 minutos.
+
 <p align="center"><img src="docs/screenshots/images.png" width="760" alt="Geração de imagens" /></p>
 
 ### 🎙️ Voz
@@ -228,6 +237,7 @@ o ícone da bandeja só aparece com a extensão
 | Raciocínio | DeepSeek R1 Distill (1.5B, 7B), Qwen3, Phi-4 mini, gpt-oss 20B |
 | Visão | Gemma 3 4B, Qwen2.5 VL 3B, SmolVLM2 2.2B |
 | Imagens | SD-Turbo, SDXL-Turbo, Stable Diffusion 1.5, Z-Image Turbo, FLUX.1 schnell |
+| Vídeos | Wan 2.1 1.3B (texto → vídeo), Wan 2.2 5B Turbo (texto ou imagem → vídeo) |
 | Voz | Whisper Tiny, Base, Small, Medium e Large v3 Turbo |
 | Embeddings | Qwen3 Embedding 0.6B, BGE-M3, Nomic Embed v1.5 |
 | Leitura em voz alta | Piper: Faber, Cadu e Jeff (pt-BR), Amy e Lessac (en-US), Davefx (es-ES) |
@@ -371,7 +381,6 @@ com checksums SHA-256.
 
 ## Próximos passos
 
-- Vídeo a partir de texto ou de uma imagem de referência (Wan 2.2), usando o stable-diffusion.cpp com GPU.
 - Escolher a voz automaticamente pelo idioma da resposta.
 
 ## Créditos

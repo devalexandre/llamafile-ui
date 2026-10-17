@@ -109,6 +109,10 @@ export function ToolGate({
 const categoryText: Record<string, { title: string; text: string }> = {
   voice: { title: "Nenhum modelo de voz instalado", text: "Baixe um modelo Whisper recomendado para o seu computador." },
   image: { title: "Nenhum modelo de imagem instalado", text: "Baixe um modelo de imagem recomendado para o seu computador." },
+  video: {
+    title: "Nenhum modelo de vídeo instalado",
+    text: "Baixe um modelo de vídeo. Eles são grandes (5–8 GB com o codificador de texto) e funcionam bem melhor com a versão com GPU do motor de imagens.",
+  },
   embedding: {
     title: "Nenhum modelo de embeddings instalado",
     text: "Os documentos são indexados com um modelo de embeddings. Baixe um recomendado — são pequenos.",

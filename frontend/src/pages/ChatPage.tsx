@@ -8,6 +8,7 @@ import {
   Copy,
   FileText,
   Image as ImageIcon,
+  Film,
   ImagePlus,
   Loader2,
   Mic,
@@ -44,6 +45,9 @@ const imageIntent =
   /^\s*(por favor,?\s*)?(crie|cria|criar|gere|gera|gerar|desenhe|desenha|fa[çc]a|faz|pinte|ilustre|create|generate|draw|make|paint)\b.{0,40}?\b(imagem|imagens|foto|fotografia|ilustra[çc][ãa]o|desenho|pintura|arte|logo|image|picture|photo|illustration|drawing|painting)\b/i;
 
 /** With an image attached: "transforme esta foto em…", "deixe o céu roxo". */
+/** "crie um vídeo de…", "anime esta imagem". */
+const videoIntent = /\b(v[ií]deo|anima[çc][ãa]o|clipe|video|animation|clip)\b|^\s*(anime|animate)\b/i;
+
 const editIntent =
   /^\s*(por favor,?\s*)?(transforme|transforma|edite|edita|altere|altera|modifique|modifica|mude|muda|converta|converte|deixe|deixa|coloque|coloca|adicione|adiciona|remova|remove|troque|troca|transform|edit|change|turn|make|add|remove|replace)\b/i;
 
@@ -252,11 +256,15 @@ function MessageRow({
       )}
       {m.attachments.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
-          {m.attachments.map((a) => (
-            <a key={a} href={attachmentURL(a)} target="_blank" rel="noreferrer">
-              <img src={attachmentURL(a)} className="max-h-[360px] rounded-xl border border-line object-cover" />
-            </a>
-          ))}
+          {m.attachments.map((a) =>
+            a.endsWith(".webm") ? (
+              <video key={a} src={attachmentURL(a)} controls autoPlay muted loop playsInline className="max-h-[360px] rounded-xl border border-line" />
+            ) : (
+              <a key={a} href={attachmentURL(a)} target="_blank" rel="noreferrer">
+                <img src={attachmentURL(a)} className="max-h-[360px] rounded-xl border border-line object-cover" />
+              </a>
+            ),
+          )}
         </div>
       )}
       {m.error && (
@@ -384,10 +392,13 @@ function Composer({
   draft,
   onSend,
   onImage,
+  videoReady,
   imageReady,
   onStop,
 }: {
-  onImage: (text: string, reference: string) => void;
+  onImage: (text: string, reference: string, video: boolean) => void;
+  /** A video model is installed (and an image engine). */
+  videoReady: boolean;
   /** An image model and diffusionfile are installed. */
   imageReady: boolean;
   disabled: boolean;
@@ -402,7 +413,8 @@ function Composer({
   const app = useApp();
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<string[]>([]);
-  const [imageMode, setImageMode] = useState(false);
+  const [mediaMode, setMediaMode] = useState<"" | "image" | "video">("");
+  const imageMode = mediaMode !== "";
   const [adding, setAdding] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
   const rec = useRecorder();
@@ -459,11 +471,13 @@ function Composer({
     if (busy || disabled || adding || (!text.trim() && attachments.length === 0)) return;
     const images = attachments.filter((a) => !isDoc(a));
     const reference = images[0] ?? "";
-    const wantsImage =
-      imageMode || (images.length === 0 && imageIntent.test(text)) || (images.length === 1 && (imageIntent.test(text) || editIntent.test(text)));
-    if (imageReady && text.trim() && images.length <= 1 && attachments.length === images.length && wantsImage) {
-      onImage(text, reference);
-      setImageMode(false);
+    const create = imageIntent.test(text) || (images.length === 1 && editIntent.test(text));
+    const wantsVideo = mediaMode === "video" || (mediaMode === "" && videoReady && videoIntent.test(text) && (create || /^\s*(anime|animate)\b/i.test(text)));
+    const wantsImage = mediaMode === "image" || (mediaMode === "" && create);
+    const ready = wantsVideo ? videoReady : imageReady;
+    if (ready && text.trim() && images.length <= 1 && attachments.length === images.length && (wantsVideo || wantsImage)) {
+      onImage(text, reference, wantsVideo);
+      setMediaMode("");
     } else {
       onSend(text, attachments);
     }
@@ -519,7 +533,11 @@ function Composer({
           placeholder={
             disabled
               ? "Baixe um modelo para começar a conversar"
-              : imageMode
+              : mediaMode === "video"
+                ? attachments.some((a) => !isDoc(a))
+                  ? "Diga como animar a imagem anexada"
+                  : "Descreva o vídeo que você quer (ou anexe uma imagem para animar)"
+                : imageMode
                 ? attachments.some((a) => !isDoc(a))
                   ? "Diga como alterar a imagem anexada"
                   : "Descreva a imagem que você quer (ou anexe uma de referência)"
@@ -558,17 +576,23 @@ function Composer({
                 {
                   label: imageReady ? "Gerar imagem" : "Gerar imagem (baixe um modelo de imagem)",
                   icon: <ImagePlus className="size-3.5" />,
-                  onClick: () => (imageReady ? (setImageMode(true), ref.current?.focus()) : app.setPage("images")),
+                  onClick: () => (imageReady ? (setMediaMode("image"), ref.current?.focus()) : app.setPage("images")),
+                },
+                {
+                  label: videoReady ? "Gerar vídeo" : "Gerar vídeo (baixe um modelo de vídeo)",
+                  icon: <Film className="size-3.5" />,
+                  onClick: () => (videoReady ? (setMediaMode("video"), ref.current?.focus()) : app.setPage("images")),
                 },
               ]}
             />
             {imageMode && (
               <button
-                onClick={() => setImageMode(false)}
+                onClick={() => setMediaMode("")}
                 title="Voltar ao chat"
                 className="flex h-8 items-center gap-1.5 rounded-full bg-accent-soft px-2.5 text-[12.5px] font-medium text-accent"
               >
-                <ImagePlus className="size-[16px]" /> Imagem <X className="size-3" />
+                {mediaMode === "video" ? <Film className="size-[16px]" /> : <ImagePlus className="size-[16px]" />}
+                {mediaMode === "video" ? "Vídeo" : "Imagem"} <X className="size-3" />
               </button>
             )}
           </div>
@@ -780,10 +804,10 @@ export function ChatPage() {
   );
 
   const generateImage = useCallback(
-    async (text: string, reference: string) => {
+    async (text: string, reference: string, video: boolean) => {
       stick.current = true;
       try {
-        const conv = await api.generateChatImage(convId, modelId, text, reference);
+        const conv = await (video ? api.generateChatVideo : api.generateChatImage)(convId, modelId, text, reference);
         if (!convId) {
           convRef.current = conv.id;
           app.openConversation(conv.id);
@@ -794,8 +818,9 @@ export function ChatPage() {
     },
     [convId, modelId, app],
   );
-  const imageReady =
-    app.imageModels.length > 0 && app.tools.some((t) => (t.tool === "diffusionfile" || t.tool === "sd-cpp") && t.installed);
+  const engineReady = app.tools.some((t) => (t.tool === "diffusionfile" || t.tool === "sd-cpp") && t.installed);
+  const imageReady = engineReady && app.imageModels.length > 0;
+  const videoReady = engineReady && app.videoModels.length > 0;
 
   const changeModel = (id: string) => {
     setModelId(id);
@@ -896,6 +921,7 @@ export function ChatPage() {
 
       <Composer
         onImage={generateImage}
+        videoReady={videoReady}
         imageReady={imageReady}
         disabled={noModels || !modelId}
         busy={busy}

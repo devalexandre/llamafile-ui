@@ -28,6 +28,7 @@ type Settings struct {
 	VoiceLanguage string `json:"voiceLanguage"` // auto, pt, en…
 	EmbedModelID  string `json:"embedModelId"`
 	ImageModelID  string `json:"imageModelId"`
+	VideoModelID  string `json:"videoModelId"`
 	FastDecode    bool   `json:"fastDecode"`  // TAESD for image decoding
 	ImageEngine   string `json:"imageEngine"` // auto, diffusionfile, sd-cpp (stable-diffusion.cpp with GPU)
 	CloseToTray   bool   `json:"closeToTray"` // closing the window keeps the app in the system tray

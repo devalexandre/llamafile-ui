@@ -53,6 +53,7 @@ interface AppState {
   voiceModels: ModelView[];
   ttsModels: ModelView[];
   imageModels: ModelView[];
+  videoModels: ModelView[];
   embedModels: ModelView[];
   toast: (text: string, kind?: Toast["kind"]) => void;
   toasts: Toast[];
@@ -217,6 +218,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const voiceModels = useMemo(() => by((m) => m.categories.includes("voice"), settings?.voiceModelId), [by, settings?.voiceModelId]);
   const ttsModels = useMemo(() => by((m) => m.categories.includes("tts"), settings?.ttsVoiceId), [by, settings?.ttsVoiceId]);
   const imageModels = useMemo(() => by((m) => m.categories.includes("image"), settings?.imageModelId), [by, settings?.imageModelId]);
+  const videoModels = useMemo(() => by((m) => m.categories.includes("video"), settings?.videoModelId), [by, settings?.videoModelId]);
   const embedModels = useMemo(() => by((m) => m.categories.includes("embedding"), settings?.embedModelId), [by, settings?.embedModelId]);
 
   const value: AppState = {
@@ -262,6 +264,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     voiceModels,
     ttsModels,
     imageModels,
+    videoModels,
     embedModels,
     toast,
     toasts,

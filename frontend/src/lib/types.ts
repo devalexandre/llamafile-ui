@@ -40,6 +40,7 @@ export interface Settings {
   fastDecode: boolean;
   closeToTray: boolean;
   imageEngine: "auto" | "diffusionfile" | "sd-cpp";
+  videoModelId: string;
   ttsVoiceId: string;
   ttsSpeed: number;
   autoSpeak: boolean;
@@ -289,6 +290,10 @@ export interface ImageRequest {
   /** Reference image to transform (attachment name); "" = text-to-image. */
   initImage: string;
   strength: number;
+  video: boolean;
+  frames: number;
+  fps: number;
+  format: "webm" | "webp" | "avi";
 }
 
 export interface ImageItem {
@@ -308,6 +313,9 @@ export interface ImageItem {
   createdAt: number;
   reference: string;
   strength: number;
+  kind: "image" | "video";
+  frames: number;
+  fps: number;
 }
 
 export interface ImageProgress {
@@ -327,6 +335,10 @@ export interface ImageDefaults {
   sampler: string;
   negative: boolean;
   taesd: boolean;
+  video: boolean;
+  frames: number;
+  fps: number;
+  imageInput: boolean;
 }
 
 /** Content handed to the chat from other pages ("send to chat"). */

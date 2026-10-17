@@ -62,3 +62,33 @@ func copyFile(src, dst string) error {
 	_, err = io.Copy(out, in)
 	return err
 }
+
+// prepareVideo normalizes a video request: Wan needs 4n+1 frames, and with a
+// first-frame reference the output keeps its aspect ratio.
+func prepareVideo(req *Request) error {
+	if req.Frames <= 1 {
+		req.Frames = 33
+	}
+	req.Frames = (req.Frames-1)/4*4 + 1
+	if req.FPS <= 0 {
+		req.FPS = 16
+	}
+	switch req.Format {
+	case "webp", "avi":
+	default:
+		req.Format = "webm"
+	}
+	if req.InitImage != "" {
+		f, err := os.Open(req.InitImage)
+		if err != nil {
+			return errors.New("não foi possível abrir a imagem de referência")
+		}
+		cfg, _, err := image.DecodeConfig(f)
+		f.Close()
+		if err != nil || cfg.Width == 0 || cfg.Height == 0 {
+			return errors.New("formato de imagem de referência não suportado (use PNG, JPG, WebP ou GIF)")
+		}
+		req.Width, req.Height = FitSize(cfg.Width, cfg.Height, max(req.Width, req.Height))
+	}
+	return nil
+}
