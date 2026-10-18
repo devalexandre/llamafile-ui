@@ -431,6 +431,17 @@ func (s *Service) stream(ctx context.Context, conv Conversation, msg *Message, m
 		"messages":    messages,
 		"stream":      true,
 		"temperature": temperature,
+		// Anti-repetition sampling (llama.cpp): small models easily fall
+		// into loops on long answers without it.
+		"repeat_penalty":     1.1,
+		"repeat_last_n":      256,
+		"dry_multiplier":     0.8,
+		"dry_base":           1.75,
+		"dry_allowed_length": 2,
+		"dry_penalty_last_n": 1024,
+		"min_p":              0.05,
+		"top_p":              0.95,
+		"top_k":              40,
 	})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.backend.BaseURL()+"/v1/chat/completions", bytes.NewReader(body))
 	if err != nil {
@@ -457,6 +468,7 @@ func (s *Service) stream(ctx context.Context, conv Conversation, msg *Message, m
 	started := time.Now()
 	tokens := 0
 	lastSave := time.Now()
+	checked := 0 // content length at the last loop check
 	reader := bufio.NewReader(resp.Body)
 	for {
 		line, err := reader.ReadString('\n')
@@ -477,6 +489,16 @@ func (s *Service) stream(ctx context.Context, conv Conversation, msg *Message, m
 						msg.Reasoning += c.Delta.ReasoningContent
 						if s.events.Delta != nil {
 							s.events.Delta(conv.ID, msg.ID, msg.Content, msg.Reasoning)
+						}
+						if strings.Contains(c.Delta.Content, "\n") && len(msg.Content)-checked > 200 {
+							checked = len(msg.Content)
+							if cut, ok := repetitionCut(msg.Content); ok {
+								msg.Content = strings.TrimRight(msg.Content[:cut], "\n ") + "\n\n" + RepetitionNote
+								if s.events.Delta != nil {
+									s.events.Delta(conv.ID, msg.ID, msg.Content, msg.Reasoning)
+								}
+								return nil // stop reading: closing the body ends the generation
+							}
 						}
 					}
 				}
