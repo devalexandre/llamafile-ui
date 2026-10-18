@@ -8,6 +8,8 @@ export default defineConfig({
     host: "127.0.0.1",
     port: Number(process.env.WAILS_VITE_PORT) || 9245,
     strictPort: true,
+    // Translations live in internal/i18n/locales (shared with the Go backend).
+    fs: { allow: [".."] },
   },
   plugins: [react(), tailwindcss(), wails("./bindings")],
 });

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { setLanguage, systemLanguage } from "../i18n";
 import { api, on } from "./api";
 import type {
   Agent,
@@ -154,8 +155,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       document.documentElement.dataset.platform = p;
     });
     api.settings().then((s) => {
+      setLanguage(s.language || systemLanguage());
       setSettings(s);
       applyTheme(s.theme);
+      // First launch: remember the system language so the backend uses it too.
+      if (!s.language) api.saveSettings({ ...s, language: systemLanguage() }).then(setSettings).catch(() => {});
     });
     api.runtime().then((r) => {
       setRuntime(r);
@@ -188,6 +192,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       on("tools:changed", loadTools),
       on("catalog:changed", refreshCatalog),
       on<Settings>("settings:changed", (s) => {
+        if (s.language) setLanguage(s.language);
         setSettings(s);
         applyTheme(s.theme);
       }),
@@ -218,6 +223,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!settings) return;
       try {
         const saved = await api.saveSettings({ ...settings, ...patch });
+        if (saved.language) setLanguage(saved.language);
         setSettings(saved);
         applyTheme(saved.theme);
         return saved;

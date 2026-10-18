@@ -36,8 +36,13 @@ func (a *backend) BaseURL() string               { return a.runtime.Status().Bas
 func (a *backend) SupportsVision(id string) bool { return a.catalog.MMProjPath(id) != "" }
 func (a *backend) ContextSize() int              { return a.settings.Get().ContextSize }
 func (a *backend) Temperature() float64          { return a.settings.Get().Temperature }
-func (a *backend) DefaultSystemPrompt() string   { return a.settings.Get().SystemPrompt }
-func (a *backend) AutoTitle() bool               { return a.settings.Get().AutoTitle }
+func (a *backend) DefaultSystemPrompt() string {
+	if p := a.settings.Get().SystemPrompt; p != "" {
+		return p
+	}
+	return settings.DefaultPrompt()
+}
+func (a *backend) AutoTitle() bool { return a.settings.Get().AutoTitle }
 func (a *backend) AttachmentPath(name string) string {
 	return filepath.Join(paths.AttachmentsDir(), filepath.Base(name))
 }

@@ -28,6 +28,8 @@ export interface Settings {
   threads: number;
   autoStart: boolean;
   theme: "system" | "light" | "dark";
+  /** UI language code; "" until detected from the system. */
+  language: string;
   modelsDir: string;
   systemPrompt: string;
   temperature: number;

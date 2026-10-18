@@ -1,5 +1,6 @@
 import clsx from "clsx";
-import { AlertTriangle, CheckCircle2, Cpu, Download, FileSearch, FolderOpen, Play, RotateCcw, Square, Terminal, Volume2, Zap } from "lucide-react";
+import { currentLanguage, languages, t } from "../i18n";
+import { AlertTriangle, CheckCircle2, Cpu, Download, FileSearch, FolderOpen, Play, RotateCcw, Square, Languages, Terminal, Volume2, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DownloadProgress } from "../components/ModelCard";
 import { Button, Card, Field, Row, Section, Segmented, Select, StatusDot, Switch } from "../components/ui";
@@ -649,6 +650,7 @@ export function SettingsPage() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onBlur={() => prompt !== s.systemPrompt && save({ systemPrompt: prompt })}
+                placeholder={t("Você é um assistente útil, direto e preciso. Responda no idioma do usuário.")}
                 rows={3}
                 className="w-full resize-y rounded-[7px] border border-line bg-card px-2.5 py-2 text-[13px] outline-none focus:border-accent focus:ring-3 focus:ring-accent-soft"
               />
@@ -673,6 +675,13 @@ export function SettingsPage() {
           <SpeechSection />
 
           <Section title="Aparência">
+            <Row label={<span className="flex items-center gap-1.5"><Languages className="size-3.5 text-muted" /> {t("Idioma")}</span>} hint={t("Idioma da interface. As respostas dos modelos seguem o idioma em que você escreve.")}>
+              <Select
+                value={s.language || currentLanguage()}
+                onChange={(v) => save({ language: v })}
+                options={languages.map((l) => ({ value: l.code, label: l.name }))}
+              />
+            </Row>
             <Row label="Tema" hint="Nocturne — tema próprio inspirado no Dracula e no One Dark.">
               <Segmented
                 value={s.theme}

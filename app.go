@@ -19,6 +19,7 @@ import (
 	"github.com/devalexandre/llamafile-ui/internal/downloads"
 	"github.com/devalexandre/llamafile-ui/internal/eventbus"
 	"github.com/devalexandre/llamafile-ui/internal/hardware"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/rag"
@@ -36,22 +37,23 @@ const modelKeyPrefix = "model:"
 // interfaces used by internal packages are implemented by [backend] so they
 // are not exposed to JavaScript.
 type App struct {
-	ctx       context.Context
-	window    *application.WebviewWindow
-	bus       *eventbus.Bus
-	onRuntime func(runtime.Status) // tray menu hook
-	settings  *settings.Store
-	catalog   *catalog.Catalog
-	downloads *downloads.Manager
-	runtime   *runtime.Manager // chat server
-	embedder  *runtime.Manager // embeddings server (port + 1)
-	chat      *chat.Service
-	docs      *rag.Store
-	images    *imagegen.Generator
-	voice     *voice.Store
-	recorder  voice.Recorder
-	bench     *bench.Store
-	speaker   tts.Speaker
+	ctx        context.Context
+	window     *application.WebviewWindow
+	bus        *eventbus.Bus
+	onRuntime  func(runtime.Status) // tray menu hook
+	onLanguage func()               // tray menu hook
+	settings   *settings.Store
+	catalog    *catalog.Catalog
+	downloads  *downloads.Manager
+	runtime    *runtime.Manager // chat server
+	embedder   *runtime.Manager // embeddings server (port + 1)
+	chat       *chat.Service
+	docs       *rag.Store
+	images     *imagegen.Generator
+	voice      *voice.Store
+	recorder   voice.Recorder
+	bench      *bench.Store
+	speaker    tts.Speaker
 
 	hwOnce sync.Once
 	hwMu   sync.RWMutex
@@ -66,6 +68,7 @@ type App struct {
 
 func NewApp() (*App, error) {
 	a := &App{settings: settings.Load(), downloads: downloads.New(), pendingTools: map[string]string{}, chatImages: map[string]chatImageJob{}, imagePending: map[string]bool{}, bus: eventbus.New()}
+	i18n.SetLanguage(a.settings.Get().Language)
 	cat, err := catalog.New(func() string { return a.settings.Get().ModelsDir })
 	if err != nil {
 		return nil, err
@@ -237,6 +240,7 @@ func (a *App) updateSettings(fn func(*settings.Settings)) error {
 	}
 	saved, err := a.settings.Save(after)
 	if err == nil {
+		i18n.SetLanguage(saved.Language)
 		a.emit("settings:changed", saved)
 	}
 	return err
@@ -247,6 +251,10 @@ func (a *App) SaveSettings(s settings.Settings) (settings.Settings, error) {
 	saved, err := a.settings.Save(s)
 	if err != nil {
 		return saved, err
+	}
+	i18n.SetLanguage(saved.Language)
+	if saved.Language != before.Language && a.onLanguage != nil {
+		a.onLanguage() // relabel the tray menu
 	}
 	a.emit("settings:changed", saved)
 	if saved.ModelsDir != before.ModelsDir || saved.ContextSize != before.ContextSize {
