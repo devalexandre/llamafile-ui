@@ -1354,6 +1354,403 @@
     "query_prefix": "",
     "doc_prefix": ""
    }
+  },
+  {
+   "id": "piper-pt-br-faber",
+   "name": "Faber (pt-BR)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 82
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "português",
+    "voz masculina",
+    "recomendada"
+   ],
+   "description": "Voz brasileira natural e clara, boa para ouvir respostas longas.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "pt_BR-faber-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx",
+     "size": 63201294
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "pt_BR-faber-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json",
+     "size": 4855
+    }
+   ],
+   "tts": {
+    "language": "pt-BR"
+   }
+  },
+  {
+   "id": "piper-pt-br-cadu",
+   "name": "Cadu (pt-BR)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 78
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "português",
+    "voz masculina"
+   ],
+   "description": "Voz brasileira jovem, ritmo um pouco mais rápido.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "pt_BR-cadu-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/cadu/medium/pt_BR-cadu-medium.onnx",
+     "size": 62950044
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "pt_BR-cadu-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/cadu/medium/pt_BR-cadu-medium.onnx.json",
+     "size": 5040
+    }
+   ],
+   "tts": {
+    "language": "pt-BR"
+   }
+  },
+  {
+   "id": "piper-pt-br-jeff",
+   "name": "Jeff (pt-BR)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 75
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "português",
+    "voz masculina"
+   ],
+   "description": "Voz brasileira grave e calma.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "pt_BR-jeff-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/jeff/medium/pt_BR-jeff-medium.onnx",
+     "size": 62950044
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "pt_BR-jeff-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/jeff/medium/pt_BR-jeff-medium.onnx.json",
+     "size": 5041
+    }
+   ],
+   "tts": {
+    "language": "pt-BR"
+   }
+  },
+  {
+   "id": "piper-en-us-amy",
+   "name": "Amy (en-US)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 70
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "inglês",
+    "voz feminina"
+   ],
+   "description": "Voz americana feminina, clara e expressiva.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "en_US-amy-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium/en_US-amy-medium.onnx",
+     "size": 63201294
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "en_US-amy-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium/en_US-amy-medium.onnx.json",
+     "size": 4882
+    }
+   ],
+   "tts": {
+    "language": "en-US"
+   }
+  },
+  {
+   "id": "piper-en-us-lessac",
+   "name": "Lessac (en-US)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 72
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "inglês",
+    "voz feminina"
+   ],
+   "description": "Uma das vozes mais naturais do Piper, em inglês americano.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "en_US-lessac-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx",
+     "size": 63201294
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "en_US-lessac-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json",
+     "size": 4885
+    }
+   ],
+   "tts": {
+    "language": "en-US"
+   }
+  },
+  {
+   "id": "piper-es-es-davefx",
+   "name": "Davefx (es-ES)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 68
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "espanhol",
+    "voz masculina"
+   ],
+   "description": "Voz espanhola masculina, boa dicção.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "es_ES-davefx-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES/davefx/medium/es_ES-davefx-medium.onnx",
+     "size": 63201294
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "es_ES-davefx-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES/davefx/medium/es_ES-davefx-medium.onnx.json",
+     "size": 4817
+    }
+   ],
+   "tts": {
+    "language": "es-ES"
+   }
+  },
+  {
+   "id": "wan21-t2v-1.3b",
+   "name": "Wan 2.1 1.3B",
+   "publisher": "Alibaba (Wan-AI)",
+   "params_b": 1.3,
+   "active_params_b": 1.3,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "video"
+   ],
+   "quality": {
+    "video": 62
+   },
+   "runtime": "diffusionfile",
+   "repo": "samuelchristlie/Wan2.1-T2V-1.3B-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "texto → vídeo",
+    "leve"
+   ],
+   "description": "Vídeos curtos a partir de texto. O menor modelo de vídeo bom: cabe em GPUs de 4–6 GB.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Wan2.1-T2V-1.3B-Q4_K_M.gguf",
+     "url": "https://huggingface.co/samuelchristlie/Wan2.1-T2V-1.3B-GGUF/resolve/main/Wan2.1-T2V-1.3B-Q4_K_M.gguf",
+     "size": 982716640
+    },
+    {
+     "quant": "Q8_0",
+     "file": "Wan2.1-T2V-1.3B-Q8_0.gguf",
+     "url": "https://huggingface.co/samuelchristlie/Wan2.1-T2V-1.3B-GGUF/resolve/main/Wan2.1-T2V-1.3B-Q8_0.gguf",
+     "size": 1535768800
+    }
+   ],
+   "components": [
+    {
+     "role": "t5xxl",
+     "file": "umt5-xxl-encoder-Q4_K_M.gguf",
+     "url": "https://huggingface.co/city96/umt5-xxl-encoder-gguf/resolve/main/umt5-xxl-encoder-Q4_K_M.gguf",
+     "size": 3655145312
+    },
+    {
+     "role": "vae",
+     "file": "wan_2.1_vae.safetensors",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors",
+     "size": 253815318
+    }
+   ],
+   "image": {
+    "main_flag": "diffusion-model",
+    "steps": 20,
+    "cfg": 6,
+    "width": 480,
+    "height": 272,
+    "sampler": "euler",
+    "diffusion_params_b": 1.3,
+    "vae_cost": 1,
+    "args": [
+     "--flow-shift",
+     "3"
+    ]
+   },
+   "video": {
+    "frames": 33,
+    "fps": 16,
+    "image_input": false
+   }
+  },
+  {
+   "id": "wan22-ti2v-5b-turbo",
+   "name": "Wan 2.2 5B Turbo",
+   "publisher": "Alibaba (Wan-AI)",
+   "params_b": 5,
+   "active_params_b": 5,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "video"
+   ],
+   "quality": {
+    "video": 74
+   },
+   "runtime": "diffusionfile",
+   "repo": "hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF",
+   "license": "Apache-2.0",
+   "tags": [
+    "texto → vídeo",
+    "imagem → vídeo",
+    "4 passos"
+   ],
+   "description": "Gera vídeo a partir de texto ou anima uma imagem de referência. Versão Turbo: só 4 passos.",
+   "files": [
+    {
+     "quant": "Q4_K_M",
+     "file": "Wan2_2-TI2V-5B-Turbo-Q4_K_M.gguf",
+     "url": "https://huggingface.co/hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF/resolve/main/Wan2_2-TI2V-5B-Turbo-Q4_K_M.gguf",
+     "size": 3437927136
+    },
+    {
+     "quant": "Q3_K_M",
+     "file": "Wan2_2-TI2V-5B-Turbo-Q3_K_M.gguf",
+     "url": "https://huggingface.co/hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF/resolve/main/Wan2_2-TI2V-5B-Turbo-Q3_K_M.gguf",
+     "size": 2552601312
+    },
+    {
+     "quant": "Q5_K_S",
+     "file": "Wan2_2-TI2V-5B-Turbo-Q5_K_S.gguf",
+     "url": "https://huggingface.co/hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF/resolve/main/Wan2_2-TI2V-5B-Turbo-Q5_K_S.gguf",
+     "size": 3564739296
+    }
+   ],
+   "components": [
+    {
+     "role": "t5xxl",
+     "file": "umt5-xxl-encoder-Q4_K_M.gguf",
+     "url": "https://huggingface.co/city96/umt5-xxl-encoder-gguf/resolve/main/umt5-xxl-encoder-Q4_K_M.gguf",
+     "size": 3655145312
+    },
+    {
+     "role": "vae",
+     "file": "wan2.2_vae.safetensors",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan2.2_vae.safetensors",
+     "size": 1409400960
+    }
+   ],
+   "image": {
+    "main_flag": "diffusion-model",
+    "steps": 4,
+    "cfg": 1,
+    "width": 640,
+    "height": 352,
+    "sampler": "euler",
+    "diffusion_params_b": 2.5,
+    "vae_cost": 1.5,
+    "args": []
+   },
+   "video": {
+    "frames": 49,
+    "fps": 24,
+    "image_input": true
+   }
   }
  ],
  "version": 2

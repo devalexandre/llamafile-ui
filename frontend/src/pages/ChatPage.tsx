@@ -2,19 +2,25 @@ import clsx from "clsx";
 import {
   ArrowUp,
   BookOpen,
+  Bot,
   Brain,
   Check,
   ChevronDown,
   Copy,
   FileText,
   Image as ImageIcon,
+  Film,
+  ImagePlus,
   Loader2,
   Mic,
+  Paperclip,
   Pencil,
+  Plus,
   RotateCcw,
   Settings2,
   Sparkles,
   Square,
+  Volume2,
   X,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -22,11 +28,58 @@ import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import { Button, EmptyState, Menu } from "../components/ui";
-import { api, attachmentURL, on } from "../lib/api";
+import { api, attachmentURL, on, onFileDrop } from "../lib/api";
 import { errorText, useApp } from "../lib/store";
-import type { ChatDraft, Message, ModelView, Source } from "../lib/types";
+import type { ChatDraft, ImageProgress, Message, ModelView, Source } from "../lib/types";
 import { clock, useRecorder } from "../lib/useRecorder";
+import { phaseLabel } from "./ImagesPage";
 import { LevelBars } from "./VoicePage";
+
+const audioExts = [".wav", ".mp3", ".ogg", ".flac"];
+const isAudio = (p: string) => audioExts.some((e) => p.toLowerCase().endsWith(e));
+const isDoc = (name: string) => name.endsWith(".doc.txt");
+/** Original name of a document attachment ("<uuid>__report.pdf.doc.txt"). */
+const docName = (name: string) => name.replace(/\.doc\.txt$/, "").replace(/^[^_]+__/, "");
+
+/** Same rule as the backend: "crie uma imagem de…", "desenhe um logo…". */
+const imageIntent =
+  /^\s*(por favor,?\s*)?(crie|cria|criar|gere|gera|gerar|desenhe|desenha|fa[çc]a|faz|pinte|ilustre|create|generate|draw|make|paint)\b.{0,40}?\b(imagem|imagens|foto|fotografia|ilustra[çc][ãa]o|desenho|pintura|arte|logo|image|picture|photo|illustration|drawing|painting)\b/i;
+
+/** With an image attached: "transforme esta foto em…", "deixe o céu roxo". */
+/** "crie um vídeo de…", "anime esta imagem". */
+const videoIntent = /\b(v[ií]deo|anima[çc][ãa]o|clipe|video|animation|clip)\b|^\s*(anime|animate)\b/i;
+
+const editIntent =
+  /^\s*(por favor,?\s*)?(transforme|transforma|edite|edita|altere|altera|modifique|modifica|mude|muda|converta|converte|deixe|deixa|coloque|coloca|adicione|adiciona|remova|remove|troque|troca|transform|edit|change|turn|make|add|remove|replace)\b/i;
+
+function Attachments({ names, align, onRemove }: { names: string[]; align?: "end"; onRemove?: (n: string) => void }) {
+  return (
+    <div className={clsx("flex flex-wrap gap-1.5", align === "end" && "justify-end")}>
+      {names.map((a) => (
+        <div key={a} className="relative">
+          {isDoc(a) ? (
+            <div className="flex h-14 max-w-[220px] items-center gap-2 rounded-lg border border-line bg-field px-3 text-[12px]">
+              <FileText className="size-4 shrink-0 text-accent" />
+              <span className="truncate">{docName(a)}</span>
+            </div>
+          ) : onRemove ? (
+            <img src={attachmentURL(a)} className="size-14 rounded-lg border border-line object-cover" />
+          ) : (
+            <img src={attachmentURL(a)} className="max-h-40 rounded-xl border border-line object-cover" />
+          )}
+          {onRemove && (
+            <button
+              onClick={() => onRemove(a)}
+              className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-fg text-bg"
+            >
+              <X className="size-3" />
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const suggestions = [
   "Explique como funciona a quantização de modelos",
@@ -55,6 +108,40 @@ function ModelPicker({ models, value, onChange }: { models: ModelView[]; value: 
         icon: m.id === value ? <Check className="size-3.5" /> : undefined,
         onClick: () => onChange(m.id),
       }))}
+    />
+  );
+}
+
+function AgentPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const app = useApp();
+  const current = app.agents.find((a) => a.id === value);
+  return (
+    <Menu
+      align="left"
+      trigger={(toggle) => (
+        <button
+          onClick={toggle}
+          title="Agente que responde nesta conversa"
+          className={clsx(
+            "no-drag flex h-[26px] items-center gap-1.5 rounded-full px-2.5 text-[12.5px]",
+            current ? "bg-accent-soft font-medium text-accent" : "text-muted hover:bg-hover hover:text-fg",
+          )}
+        >
+          {current ? <span>{current.icon}</span> : <Bot className="size-3.5" />}
+          {current ? current.name : "Agente"}
+          <ChevronDown className="size-3" />
+        </button>
+      )}
+      items={[
+        { label: "Assistente padrão", icon: !value ? <Check className="size-3.5" /> : undefined, onClick: () => onChange("") },
+        ...app.agents.map((a) => ({
+          label: `${a.icon} ${a.name}`,
+          icon: a.id === value ? <Check className="size-3.5" /> : undefined,
+          onClick: () => onChange(a.id),
+        })),
+        "separator" as const,
+        { label: "Gerenciar agentes…", icon: <Settings2 className="size-3.5" />, onClick: () => app.setPage("agents") },
+      ]}
     />
   );
 }
@@ -107,8 +194,13 @@ function MessageRow({
   onRegenerate,
   onEdit,
   busy,
+  waitingLabel,
+  speaking,
 }: {
+  /** This message is being read aloud. */
+  speaking?: boolean;
   m: Message;
+  waitingLabel?: string;
   streaming: boolean;
   isLast: boolean;
   onRegenerate: () => void;
@@ -122,10 +214,8 @@ function MessageRow({
     return (
       <div className="group flex flex-col items-end">
         {m.attachments.length > 0 && (
-          <div className="mb-1.5 flex flex-wrap justify-end gap-1.5">
-            {m.attachments.map((a) => (
-              <img key={a} src={attachmentURL(a)} className="max-h-40 rounded-xl border border-line object-cover" />
-            ))}
+          <div className="mb-1.5">
+            <Attachments names={m.attachments} align="end" />
           </div>
         )}
         {editing ? (
@@ -187,7 +277,7 @@ function MessageRow({
       {m.reasoning && <Reasoning text={m.reasoning} streaming={streaming && !m.content} />}
       {waiting ? (
         <div className="flex items-center gap-2 py-1 text-[13px] text-muted">
-          <Loader2 className="size-3.5 animate-spin" /> Gerando…
+          <Loader2 className="size-3.5 animate-spin" /> {waitingLabel ?? "Gerando…"}
         </div>
       ) : (
         <div
@@ -199,14 +289,30 @@ function MessageRow({
           <Markdown text={m.content} />
         </div>
       )}
+      {m.attachments.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {m.attachments.map((a) =>
+            a.endsWith(".webm") ? (
+              <video key={a} src={attachmentURL(a)} controls autoPlay muted loop playsInline className="max-h-[360px] rounded-xl border border-line" />
+            ) : (
+              <a key={a} href={attachmentURL(a)} target="_blank" rel="noreferrer">
+                <img src={attachmentURL(a)} className="max-h-[360px] rounded-xl border border-line object-cover" />
+              </a>
+            ),
+          )}
+        </div>
+      )}
       {m.error && (
         <div className="mt-2 rounded-lg bg-bad-soft px-3 py-2 text-[12.5px] text-bad">{m.error}</div>
       )}
       {m.sources?.length > 0 && <Sources sources={m.sources} />}
       {!streaming && (
-        <div className="mt-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className={clsx("mt-1 flex items-center gap-0.5 transition-opacity group-hover:opacity-100", speaking ? "opacity-100" : "opacity-0")}>
           <CopyButton text={m.content} />
-          {isLast && !busy && (
+          {m.content && (
+            <SpeakButton id={`msg:${m.id}`} text={m.content} speaking={!!speaking} />
+          )}
+          {isLast && !busy && m.attachments.length === 0 && (
             <button
               title="Gerar novamente"
               onClick={onRegenerate}
@@ -223,6 +329,22 @@ function MessageRow({
         </div>
       )}
     </div>
+  );
+}
+
+function SpeakButton({ id, text, speaking }: { id: string; text: string; speaking: boolean }) {
+  const app = useApp();
+  return (
+    <button
+      title={speaking ? "Parar leitura" : "Ouvir"}
+      onClick={() => (speaking ? api.stopSpeaking() : api.speak(id, text).catch((e) => app.toast(errorText(e), "error")))}
+      className={clsx(
+        "flex size-6 items-center justify-center rounded-md hover:bg-hover",
+        speaking ? "text-accent" : "text-muted hover:text-fg",
+      )}
+    >
+      {speaking ? <Square className="size-3 fill-current" /> : <Volume2 className="size-3.5" />}
+    </button>
   );
 }
 
@@ -268,6 +390,7 @@ function CollectionPicker({ value, onChange }: { value: string; onChange: (id: s
   return (
     <Menu
       align="left"
+      side="top"
       trigger={(toggle) => (
         <button
           onClick={toggle}
@@ -303,8 +426,16 @@ function Composer({
   onCollection,
   draft,
   onSend,
+  onImage,
+  videoReady,
+  imageReady,
   onStop,
 }: {
+  onImage: (text: string, reference: string, video: boolean) => void;
+  /** A video model is installed (and an image engine). */
+  videoReady: boolean;
+  /** An image model and diffusionfile are installed. */
+  imageReady: boolean;
   disabled: boolean;
   busy: boolean;
   vision: boolean;
@@ -317,8 +448,35 @@ function Composer({
   const app = useApp();
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<string[]>([]);
+  const [mediaMode, setMediaMode] = useState<"" | "image" | "video">("");
+  const imageMode = mediaMode !== "";
+  const [adding, setAdding] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
   const rec = useRecorder();
+
+  // Audio is transcribed into the message; images and documents are attached.
+  const addFiles = async (paths: string[]) => {
+    if (!paths?.length) return;
+    setAdding(true);
+    try {
+      for (const p of paths.filter(isAudio)) {
+        const t = await api.transcribeForChat(p);
+        if (t) setText((cur) => (cur.trim() ? `${cur.trimEnd()} ${t}` : t));
+      }
+      const rest = paths.filter((p) => !isAudio(p));
+      if (rest.length) {
+        const names = await api.attachFiles(rest);
+        if (!vision && names.some((n) => !isDoc(n))) app.toast("O modelo atual não entende imagens — escolha um modelo de Visão para usá-las.");
+        setAttachments((a) => [...a, ...names]);
+      }
+    } catch (e) {
+      app.toast(errorText(e), "error");
+    } finally {
+      setAdding(false);
+      ref.current?.focus();
+    }
+  };
+  useEffect(() => onFileDrop((paths) => !disabled && addFiles(paths))); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Content handed over by another page ("Resumir no chat", "Perguntar no chat"…).
   useEffect(() => {
@@ -345,14 +503,24 @@ function Composer({
   useEffect(() => ref.current?.focus(), [app.conversationId]);
 
   const submit = () => {
-    if (busy || disabled || (!text.trim() && attachments.length === 0)) return;
-    onSend(text, attachments);
+    if (busy || disabled || adding || (!text.trim() && attachments.length === 0)) return;
+    const images = attachments.filter((a) => !isDoc(a));
+    const reference = images[0] ?? "";
+    const create = imageIntent.test(text) || (images.length === 1 && editIntent.test(text));
+    const wantsVideo = mediaMode === "video" || (mediaMode === "" && videoReady && videoIntent.test(text) && (create || /^\s*(anime|animate)\b/i.test(text)));
+    const wantsImage = mediaMode === "image" || (mediaMode === "" && create);
+    const ready = wantsVideo ? videoReady : imageReady;
+    if (ready && text.trim() && images.length <= 1 && attachments.length === images.length && (wantsVideo || wantsImage)) {
+      onImage(text, reference, wantsVideo);
+      setMediaMode("");
+    } else {
+      onSend(text, attachments);
+    }
     setText("");
     setAttachments([]);
   };
 
   const onPaste = async (e: React.ClipboardEvent) => {
-    if (!vision) return;
     for (const item of Array.from(e.clipboardData.items)) {
       if (!item.type.startsWith("image/")) continue;
       e.preventDefault();
@@ -370,20 +538,18 @@ function Composer({
 
   return (
     <div className="mx-auto w-full max-w-[760px] px-6 pb-5">
-      <div className="rounded-[20px] border border-line bg-card shadow-mac focus-within:border-accent/50">
+      <div
+        data-file-drop-target
+        className="rounded-[20px] border border-line bg-card shadow-mac focus-within:border-accent/50 [&.file-drop-target-active]:border-accent [&.file-drop-target-active]:bg-accent-soft"
+      >
         {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-3 pt-3">
-            {attachments.map((a) => (
-              <div key={a} className="relative">
-                <img src={attachmentURL(a)} className="size-14 rounded-lg border border-line object-cover" />
-                <button
-                  onClick={() => setAttachments((list) => list.filter((x) => x !== a))}
-                  className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-fg text-bg"
-                >
-                  <X className="size-3" />
-                </button>
-              </div>
-            ))}
+          <div className="px-3 pt-3">
+            <Attachments names={attachments} onRemove={(a) => setAttachments((list) => list.filter((x) => x !== a))} />
+          </div>
+        )}
+        {adding && (
+          <div className="flex items-center gap-1.5 px-4 pt-2.5 text-[12px] text-muted">
+            <Loader2 className="size-3.5 animate-spin" /> Preparando arquivos…
           </div>
         )}
         <textarea
@@ -399,26 +565,69 @@ function Composer({
               submit();
             }
           }}
-          placeholder={disabled ? "Baixe um modelo para começar a conversar" : "Pergunte qualquer coisa"}
+          placeholder={
+            disabled
+              ? "Baixe um modelo para começar a conversar"
+              : mediaMode === "video"
+                ? attachments.some((a) => !isDoc(a))
+                  ? "Diga como animar a imagem anexada"
+                  : "Descreva o vídeo que você quer (ou anexe uma imagem para animar)"
+                : imageMode
+                ? attachments.some((a) => !isDoc(a))
+                  ? "Diga como alterar a imagem anexada"
+                  : "Descreva a imagem que você quer (ou anexe uma de referência)"
+                : "Pergunte qualquer coisa"
+          }
           className="block w-full resize-none bg-transparent px-4 pt-3 pb-1 text-[14px] leading-relaxed outline-none placeholder:text-faint"
         />
         <div className="flex items-center justify-between px-2.5 pb-2.5">
           <div className="flex items-center gap-0.5">
             <CollectionPicker value={collectionId} onChange={onCollection} />
-            {vision && (
+            <Menu
+              align="left"
+              side="top"
+              trigger={(toggle) => (
+                <button
+                  title="Anexar arquivos ou gerar imagem"
+                  onClick={toggle}
+                  disabled={disabled}
+                  className="flex size-8 items-center justify-center rounded-full text-muted hover:bg-hover hover:text-fg disabled:opacity-30"
+                >
+                  <Plus className="size-[19px]" />
+                </button>
+              )}
+              items={[
+                {
+                  label: "Arquivos, imagens ou áudio…",
+                  icon: <Paperclip className="size-3.5" />,
+                  onClick: async () => {
+                    try {
+                      addFiles(await api.pickChatFiles());
+                    } catch (e) {
+                      app.toast(errorText(e), "error");
+                    }
+                  },
+                },
+                {
+                  label: imageReady ? "Gerar imagem" : "Gerar imagem (baixe um modelo de imagem)",
+                  icon: <ImagePlus className="size-3.5" />,
+                  onClick: () => (imageReady ? (setMediaMode("image"), ref.current?.focus()) : app.setPage("images")),
+                },
+                {
+                  label: videoReady ? "Gerar vídeo" : "Gerar vídeo (baixe um modelo de vídeo)",
+                  icon: <Film className="size-3.5" />,
+                  onClick: () => (videoReady ? (setMediaMode("video"), ref.current?.focus()) : app.setPage("images")),
+                },
+              ]}
+            />
+            {imageMode && (
               <button
-                title="Anexar imagem"
-                onClick={async () => {
-                  try {
-                    const names = await api.pickImages();
-                    setAttachments((a) => [...a, ...names]);
-                  } catch (e) {
-                    app.toast(errorText(e), "error");
-                  }
-                }}
-                className="flex size-8 items-center justify-center rounded-full text-muted hover:bg-hover hover:text-fg"
+                onClick={() => setMediaMode("")}
+                title="Voltar ao chat"
+                className="flex h-8 items-center gap-1.5 rounded-full bg-accent-soft px-2.5 text-[12.5px] font-medium text-accent"
               >
-                <ImageIcon className="size-[18px]" />
+                {mediaMode === "video" ? <Film className="size-[16px]" /> : <ImagePlus className="size-[16px]" />}
+                {mediaMode === "video" ? "Vídeo" : "Imagem"} <X className="size-3" />
               </button>
             )}
           </div>
@@ -460,7 +669,7 @@ function Composer({
               <button
                 title="Enviar (Enter)"
                 onClick={submit}
-                disabled={disabled || (!text.trim() && attachments.length === 0)}
+                disabled={disabled || adding || (!text.trim() && attachments.length === 0)}
                 className="flex size-8 items-center justify-center rounded-full bg-accent text-on-accent transition-opacity disabled:opacity-30"
               >
                 <ArrowUp className="size-[18px]" strokeWidth={2.5} />
@@ -484,7 +693,17 @@ export function ChatPage() {
   const [status, setStatus] = useState(""); // loading | searching | generating | ""
   const [streamingId, setStreamingId] = useState<number | null>(null);
   const [collectionId, setCollectionId] = useState("");
+  // Agent answering and project of the conversation (or of the new chat).
+  const [agentId, setAgentId] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [draft, setDraft] = useState<ChatDraft | null>(null);
+  const [imageStep, setImageStep] = useState("");
+  const [speakingId, setSpeakingId] = useState("");
+  const autoSpeak = useRef(false);
+  autoSpeak.current = !!app.settings?.autoSpeak;
+  useEffect(() => {
+    api.speakingId().then((id) => setSpeakingId(id ?? ""));
+  }, []);
   const scroller = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
   const convId = app.conversationId;
@@ -513,7 +732,11 @@ export function ChatPage() {
       setStreamingId(null);
       const d = app.takeChatDraft();
       setDraft(d);
-      setCollectionId(d?.collectionId ?? "");
+      const proj = app.projects.find((p) => p.id === d?.projectId);
+      const ag = app.agents.find((a) => a.id === (d?.agentId || proj?.agentId));
+      setProjectId(d?.projectId ?? "");
+      setAgentId(ag?.id ?? "");
+      setCollectionId(d?.collectionId || proj?.collectionId || ag?.collectionId || "");
       return;
     }
     api
@@ -522,10 +745,16 @@ export function ChatPage() {
         setMessages(d.messages);
         setTitle(d.conversation.title);
         setCollectionId(d.conversation.collectionId ?? "");
+        setAgentId(d.conversation.agentId ?? "");
+        setProjectId(d.conversation.projectId ?? "");
         if (d.conversation.modelId && app.chatModels.some((m) => m.id === d.conversation.modelId)) {
           setModelId(d.conversation.modelId);
         }
-        if (d.generating) {
+        if (d.generatingImage) {
+          setStatus("image");
+          const last = d.messages[d.messages.length - 1];
+          setStreamingId(last?.role === "assistant" ? last.id : null);
+        } else if (d.generating) {
           setStatus("generating");
           const last = d.messages[d.messages.length - 1];
           setStreamingId(last?.role === "assistant" ? last.id : null);
@@ -569,10 +798,23 @@ export function ChatPage() {
         if (m.conversationId !== convRef.current) return;
         setMessages((list) => list.map((x) => (x.id === m.id ? m : x)));
         setStreamingId(null);
+        if (autoSpeak.current && m.role === "assistant" && m.content && !m.error && m.attachments.length === 0) {
+          api.speak(`msg:${m.id}`, m.content).catch(() => {});
+        }
+      }),
+      on<{ id: string; playing: boolean; error: string }>("tts:state", (s) => {
+        setSpeakingId((cur) => (s.playing ? s.id : cur === s.id ? "" : cur));
+        if (s.error) app.toast(s.error, "error");
       }),
       on<{ conversationId: string; status: string }>("chat:status", (s) => {
         if (s.conversationId === convRef.current) setStatus(s.status);
+        if (s.status !== "image") setImageStep("");
       }),
+      on<ImageProgress>("image:progress", (p) =>
+        setImageStep(
+          `${phaseLabel[p.phase] ?? "Gerando a imagem…"}${p.phase === "sampling" && p.steps > 0 ? ` ${p.step}/${p.steps}` : ""}`,
+        ),
+      ),
     ];
     return () => offs.forEach((off) => off());
   }, []);
@@ -592,7 +834,7 @@ export function ChatPage() {
       stick.current = true;
       try {
         if (!convId) setStatus("loading");
-        const conv = await api.send(convId, modelId, collectionId, text, attachments);
+        const conv = await api.sendWith({ conversationId: convId, modelId, collectionId, agentId, projectId, text, attachments });
         if (!convId) {
           convRef.current = conv.id;
           app.openConversation(conv.id);
@@ -602,8 +844,27 @@ export function ChatPage() {
         app.toast(errorText(e), "error");
       }
     },
-    [convId, modelId, collectionId, app],
+    [convId, modelId, collectionId, agentId, projectId, app],
   );
+
+  const generateImage = useCallback(
+    async (text: string, reference: string, video: boolean) => {
+      stick.current = true;
+      try {
+        const conv = await (video ? api.generateChatVideo : api.generateChatImage)(convId, modelId, text, reference);
+        if (!convId) {
+          convRef.current = conv.id;
+          app.openConversation(conv.id);
+        }
+      } catch (e) {
+        app.toast(errorText(e), "error");
+      }
+    },
+    [convId, modelId, app],
+  );
+  const engineReady = app.tools.some((t) => (t.tool === "diffusionfile" || t.tool === "sd-cpp") && t.installed);
+  const imageReady = engineReady && app.imageModels.length > 0;
+  const videoReady = engineReady && app.videoModels.length > 0;
 
   const changeModel = (id: string) => {
     setModelId(id);
@@ -616,6 +877,16 @@ export function ChatPage() {
     if (convId) api.setConversationCollection(convId, id);
   };
   const collection = app.collections.find((c) => c.id === collectionId);
+  const agent = app.agents.find((a) => a.id === agentId);
+  const project = app.projects.find((p) => p.id === projectId);
+
+  const changeAgent = (id: string) => {
+    setAgentId(id);
+    if (convId) api.setConversationAgent(convId, id).catch((e) => app.toast(errorText(e), "error"));
+    const a = app.agents.find((x) => x.id === id);
+    if (a?.modelId && a.modelId !== modelId && app.chatModels.some((m) => m.id === a.modelId)) changeModel(a.modelId);
+    if (a?.collectionId && !collectionId) changeCollection(a.collectionId);
+  };
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const empty = messages.length === 0;
@@ -624,7 +895,19 @@ export function ChatPage() {
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col bg-bg">
       <header className="drag flex h-[52px] shrink-0 items-center gap-2 border-b border-line px-4">
+        {project && (
+          <button
+            onClick={() => app.openProject(project.id)}
+            className="no-drag flex h-[26px] shrink-0 items-center gap-1 rounded-[7px] px-2 text-[12.5px] text-muted hover:bg-hover hover:text-fg"
+            title="Abrir o projeto"
+          >
+            <span>{project.icon}</span>
+            <span className="max-w-[140px] truncate">{project.name}</span>
+            <span className="text-faint">/</span>
+          </button>
+        )}
         {app.chatModels.length > 0 && <ModelPicker models={app.chatModels} value={modelId} onChange={changeModel} />}
+        <AgentPicker value={agentId} onChange={changeAgent} />
         {title && <span className="truncate text-[13px] text-muted">· {title}</span>}
         <div className="flex-1" />
         {status === "loading" && (
@@ -666,9 +949,12 @@ export function ChatPage() {
             />
           ) : (
             <div className="mx-auto flex h-full max-w-[680px] flex-col items-center justify-center px-6 pb-10">
-              <div className="mb-1 text-[26px] font-semibold tracking-tight">Como posso ajudar?</div>
-              <div className="mb-7 text-[13px] text-muted">
-                {model ? `Conversando com ${model.name}` : "Escolha um modelo"} — tudo fica no seu computador.
+              {agent && <div className="mb-2 text-[40px] leading-none">{agent.icon}</div>}
+              <div className="mb-1 text-[26px] font-semibold tracking-tight">{agent ? agent.name : "Como posso ajudar?"}</div>
+              <div className="mb-7 max-w-[520px] text-center text-[13px] text-muted">
+                {agent?.description ? `${agent.description} · ` : ""}
+                {model ? `Usando ${model.name}` : "Escolha um modelo"}
+                {project ? ` no projeto ${project.name}` : ""} — tudo fica no seu computador.
               </div>
               <div className="grid w-full grid-cols-2 gap-2">
                 {suggestions.map((s) => (
@@ -690,6 +976,8 @@ export function ChatPage() {
                 key={m.id}
                 m={m}
                 streaming={m.id === streamingId}
+                waitingLabel={status === "image" ? imageStep || "Preparando a imagem…" : undefined}
+                speaking={speakingId === `msg:${m.id}`}
                 isLast={m.id === lastAssistant?.id}
                 busy={busy}
                 onRegenerate={() => api.regenerate(convId).catch((e) => app.toast(errorText(e), "error"))}
@@ -701,6 +989,9 @@ export function ChatPage() {
       </div>
 
       <Composer
+        onImage={generateImage}
+        videoReady={videoReady}
+        imageReady={imageReady}
         disabled={noModels || !modelId}
         busy={busy}
         vision={!!model?.vision}

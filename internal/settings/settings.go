@@ -26,10 +26,18 @@ type Settings struct {
 
 	VoiceModelID  string `json:"voiceModelId"`
 	VoiceLanguage string `json:"voiceLanguage"` // auto, pt, en…
+	VoiceEngine   string `json:"voiceEngine"`   // auto, whisperfile, whisper-gpu (whisper.cpp with GPU)
+	VoiceAccurate bool   `json:"voiceAccurate"` // beam search: slower, slightly more accurate
 	EmbedModelID  string `json:"embedModelId"`
 	ImageModelID  string `json:"imageModelId"`
+	VideoModelID  string `json:"videoModelId"`
 	FastDecode    bool   `json:"fastDecode"`  // TAESD for image decoding
+	ImageEngine   string `json:"imageEngine"` // auto, diffusionfile, sd-cpp (stable-diffusion.cpp with GPU)
 	CloseToTray   bool   `json:"closeToTray"` // closing the window keeps the app in the system tray
+
+	TTSVoiceID string  `json:"ttsVoiceId"` // Piper voice used to read answers aloud
+	TTSSpeed   float64 `json:"ttsSpeed"`   // 1 = normal
+	AutoSpeak  bool    `json:"autoSpeak"`  // read every new answer aloud
 }
 
 func Defaults() Settings {
@@ -46,7 +54,9 @@ func Defaults() Settings {
 		AutoTitle:     true,
 		VoiceLanguage: "auto",
 		FastDecode:    true,
+		ImageEngine:   "auto",
 		CloseToTray:   true,
+		TTSSpeed:      1,
 	}
 }
 
@@ -91,6 +101,15 @@ func sanitize(s Settings) Settings {
 	}
 	if s.VoiceLanguage == "" {
 		s.VoiceLanguage = d.VoiceLanguage
+	}
+	if s.VoiceEngine != "whisperfile" && s.VoiceEngine != "whisper-gpu" {
+		s.VoiceEngine = "auto"
+	}
+	if s.ImageEngine != "diffusionfile" && s.ImageEngine != "sd-cpp" {
+		s.ImageEngine = "auto"
+	}
+	if s.TTSSpeed < 0.5 || s.TTSSpeed > 2 {
+		s.TTSSpeed = d.TTSSpeed
 	}
 	if s.Temperature < 0 || s.Temperature > 2 {
 		s.Temperature = d.Temperature

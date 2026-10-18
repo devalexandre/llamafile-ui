@@ -3,15 +3,18 @@ package voice
 import (
 	"bufio"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/devalexandre/llamafile-ui/internal/sysproc"
 	"github.com/devalexandre/llamafile-ui/internal/tools"
 )
 
@@ -25,14 +28,54 @@ func Supported(path string) bool {
 			return true
 		}
 	}
+	return IsVideo(path) && FFmpeg() != ""
+}
+
+// VideoExtensions are transcribed by extracting their audio with ffmpeg.
+var VideoExtensions = []string{".mp4", ".mkv", ".mov", ".webm", ".avi", ".m4a", ".aac", ".opus", ".wma"}
+
+func IsVideo(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	for _, e := range VideoExtensions {
+		if e == ext {
+			return true
+		}
+	}
 	return false
 }
 
+// FFmpeg returns the ffmpeg executable, if installed.
+func FFmpeg() string {
+	p, _ := exec.LookPath("ffmpeg")
+	return p
+}
+
+// ExtractAudio converts the audio track of a video (or other format) to the
+// 16 kHz mono WAV whisper expects.
+func ExtractAudio(ctx context.Context, src, dst string) error {
+	bin := FFmpeg()
+	if bin == "" {
+		return errors.New("instale o ffmpeg para transcrever vídeos")
+	}
+	cmd := exec.CommandContext(ctx, bin, "-nostdin", "-v", "error", "-y", "-i", src, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", dst)
+	sysproc.Prepare(cmd)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return fmt.Errorf("não foi possível extrair o áudio: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
 type Options struct {
-	Binary   string // whisperfile path
+	Binary   string // whisperfile or whisper-cli path
 	Model    string // ggml-*.bin path
 	Language string // "auto", "pt", "en"…
 	Threads  int
+	// Accurate uses beam search (5 candidates): ~3× slower than the default
+	// greedy decoding, for a small gain in hard audio.
+	Accurate bool
 	// OnProgress receives 0..100.
 	OnProgress func(percent int)
 }
@@ -47,7 +90,10 @@ var progressRe = regexp.MustCompile(`progress\s*=\s*(\d+)%`)
 // Transcribe runs whisperfile on an audio file and returns text and SRT subtitles.
 func Transcribe(ctx context.Context, audio string, opt Options) (Result, error) {
 	if !Supported(audio) {
-		return Result{}, fmt.Errorf("formato não suportado (%s): use WAV, MP3, OGG ou FLAC", filepath.Ext(audio))
+		if IsVideo(audio) {
+			return Result{}, errors.New("para transcrever vídeos, instale o ffmpeg (ex.: sudo pacman -S ffmpeg, sudo apt install ffmpeg, brew install ffmpeg)")
+		}
+		return Result{}, fmt.Errorf("formato não suportado (%s): use WAV, MP3, OGG, FLAC ou um vídeo", filepath.Ext(audio))
 	}
 	if opt.Binary == "" {
 		return Result{}, errors.New("whisperfile não instalado")
@@ -70,9 +116,20 @@ func Transcribe(ctx context.Context, audio string, opt Options) (Result, error) 
 	}
 	defer os.RemoveAll(tmp)
 	out := filepath.Join(tmp, "out")
+	if IsVideo(audio) {
+		wav := filepath.Join(tmp, "audio.wav")
+		if err := ExtractAudio(ctx, audio, wav); err != nil {
+			return Result{}, err
+		}
+		audio = wav
+	}
 
-	cmd := tools.Command(ctx, opt.Binary, "-m", opt.Model, "-f", audio, "-l", lang,
-		"-t", strconv.Itoa(threads), "-otxt", "-osrt", "-of", out, "-pp", "-np", "-sns")
+	args := []string{"-m", opt.Model, "-f", audio, "-l", lang,
+		"-t", strconv.Itoa(threads), "-otxt", "-osrt", "-of", out, "-pp", "-np", "-sns"}
+	if !opt.Accurate {
+		args = append(args, "-bs", "1", "-bo", "1") // greedy decoding
+	}
+	cmd := tools.Command(ctx, opt.Binary, args...)
 	stderr, _ := cmd.StderrPipe()
 	cmd.Stdout = io.Discard
 	if err := cmd.Start(); err != nil {
@@ -95,11 +152,11 @@ func Transcribe(ctx context.Context, audio string, opt Options) (Result, error) 
 		if ctx.Err() != nil {
 			return Result{}, ctx.Err()
 		}
-		return Result{}, fmt.Errorf("whisperfile falhou: %s", strings.TrimSpace(strings.Join(tail, " ")))
+		return Result{}, fmt.Errorf("a transcrição falhou: %s", strings.TrimSpace(strings.Join(tail, " ")))
 	}
 	text, err := os.ReadFile(out + ".txt")
 	if err != nil {
-		return Result{}, errors.New("whisperfile não gerou a transcrição")
+		return Result{}, errors.New("o motor de voz não gerou a transcrição")
 	}
 	srt, _ := os.ReadFile(out + ".srt")
 	return Result{Text: cleanText(string(text)), SRT: string(srt)}, nil
@@ -119,4 +176,34 @@ func cleanText(s string) string {
 		parts = append(parts, line)
 	}
 	return strings.Join(parts, " ")
+}
+
+var srtEndRe = regexp.MustCompile(`--> (\d+):(\d+):(\d+)[,.](\d+)`)
+
+// AudioSeconds returns the length of an audio file: from the WAV header when
+// possible, otherwise from the last subtitle timestamp (0 if unknown).
+func AudioSeconds(path, srt string) float64 {
+	if strings.EqualFold(filepath.Ext(path), ".wav") {
+		if f, err := os.Open(path); err == nil {
+			defer f.Close()
+			hdr := make([]byte, 44)
+			if _, err := io.ReadFull(f, hdr); err == nil && string(hdr[0:4]) == "RIFF" && string(hdr[36:40]) == "data" {
+				byteRate := binary.LittleEndian.Uint32(hdr[28:32])
+				size := binary.LittleEndian.Uint32(hdr[40:44])
+				if byteRate > 0 {
+					return float64(size) / float64(byteRate)
+				}
+			}
+		}
+	}
+	m := srtEndRe.FindAllStringSubmatch(srt, -1)
+	if len(m) == 0 {
+		return 0
+	}
+	last := m[len(m)-1]
+	h, _ := strconv.Atoi(last[1])
+	mi, _ := strconv.Atoi(last[2])
+	s, _ := strconv.Atoi(last[3])
+	ms, _ := strconv.Atoi(last[4])
+	return float64(h*3600+mi*60+s) + float64(ms)/1000
 }

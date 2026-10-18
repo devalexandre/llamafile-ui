@@ -22,6 +22,8 @@ type Conversation struct {
 	SystemPrompt string `json:"systemPrompt"`
 	Pinned       bool   `json:"pinned"`
 	CollectionID string `json:"collectionId"` // documents used for RAG ("" = none)
+	AgentID      string `json:"agentId"`      // persona answering ("" = default assistant)
+	ProjectID    string `json:"projectId"`    // project the conversation belongs to
 	CreatedAt    int64  `json:"createdAt"`    // unix ms
 	UpdatedAt    int64  `json:"updatedAt"`
 	Preview      string `json:"preview"`
@@ -89,7 +91,7 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
-	if _, err := db.Exec(schema); err != nil {
+	if _, err := db.Exec(schema + agentsSchema); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("chat db: %w", err)
 	}
@@ -97,6 +99,8 @@ func Open(path string) (*Store, error) {
 	for _, m := range []string{
 		`ALTER TABLE conversations ADD COLUMN collection_id TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE messages ADD COLUMN sources TEXT NOT NULL DEFAULT '[]'`,
+		`ALTER TABLE conversations ADD COLUMN agent_id TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE conversations ADD COLUMN project_id TEXT NOT NULL DEFAULT ''`,
 	} {
 		if _, err := db.Exec(m); err != nil && !strings.Contains(err.Error(), "duplicate column") {
 			db.Close()
@@ -114,19 +118,35 @@ func (s *Store) Close() error { return s.db.Close() }
 func now() int64 { return time.Now().UnixMilli() }
 
 // List returns conversations, pinned first then most recent. search matches
-// titles and message contents.
+// titles and message contents. Conversations inside projects only show up
+// when searching; use ProjectConversations for them.
 func (s *Store) List(search string) ([]Conversation, error) {
+	return s.list(search, nil)
+}
+
+// ProjectConversations lists the conversations of a project.
+func (s *Store) ProjectConversations(projectID string) ([]Conversation, error) {
+	return s.list("", &projectID)
+}
+
+func (s *Store) list(search string, projectID *string) ([]Conversation, error) {
 	query := `
-SELECT c.id, c.title, c.model_id, c.system_prompt, c.pinned, c.collection_id, c.created_at, c.updated_at,
+SELECT c.id, c.title, c.model_id, c.system_prompt, c.pinned, c.collection_id, c.agent_id, c.project_id, c.created_at, c.updated_at,
        COALESCE((SELECT substr(m.content, 1, 120) FROM messages m
                  WHERE m.conversation_id = c.id AND m.role = 'user' ORDER BY m.id DESC LIMIT 1), ''),
        (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id)
 FROM conversations c`
 	var args []any
-	if q := strings.TrimSpace(search); q != "" {
+	switch q := strings.TrimSpace(search); {
+	case projectID != nil:
+		query += ` WHERE c.project_id = ?`
+		args = append(args, *projectID)
+	case q != "":
 		like := "%" + q + "%"
 		query += ` WHERE c.title LIKE ? OR EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.content LIKE ?)`
 		args = append(args, like, like)
+	default:
+		query += ` WHERE c.project_id = ''`
 	}
 	query += ` ORDER BY c.pinned DESC, c.updated_at DESC`
 	rows, err := s.db.Query(query, args...)
@@ -138,8 +158,8 @@ FROM conversations c`
 	for rows.Next() {
 		var c Conversation
 		var pinned int
-		if err := rows.Scan(&c.ID, &c.Title, &c.ModelID, &c.SystemPrompt, &pinned, &c.CollectionID, &c.CreatedAt, &c.UpdatedAt,
-			&c.Preview, &c.MessageCount); err != nil {
+		if err := rows.Scan(&c.ID, &c.Title, &c.ModelID, &c.SystemPrompt, &pinned, &c.CollectionID, &c.AgentID, &c.ProjectID,
+			&c.CreatedAt, &c.UpdatedAt, &c.Preview, &c.MessageCount); err != nil {
 			return nil, err
 		}
 		c.Pinned = pinned != 0
@@ -151,8 +171,9 @@ FROM conversations c`
 func (s *Store) Get(id string) (Conversation, error) {
 	var c Conversation
 	var pinned int
-	err := s.db.QueryRow(`SELECT id, title, model_id, system_prompt, pinned, collection_id, created_at, updated_at
-FROM conversations WHERE id = ?`, id).Scan(&c.ID, &c.Title, &c.ModelID, &c.SystemPrompt, &pinned, &c.CollectionID, &c.CreatedAt, &c.UpdatedAt)
+	err := s.db.QueryRow(`SELECT id, title, model_id, system_prompt, pinned, collection_id, agent_id, project_id, created_at, updated_at
+FROM conversations WHERE id = ?`, id).Scan(&c.ID, &c.Title, &c.ModelID, &c.SystemPrompt, &pinned, &c.CollectionID, &c.AgentID,
+		&c.ProjectID, &c.CreatedAt, &c.UpdatedAt)
 	c.Pinned = pinned != 0
 	return c, err
 }
@@ -186,11 +207,29 @@ FROM messages WHERE conversation_id = ? ORDER BY id`, conversationID)
 }
 
 func (s *Store) Create(modelID, systemPrompt string) (Conversation, error) {
+	return s.CreateWith(Conversation{ModelID: modelID, SystemPrompt: systemPrompt})
+}
+
+// CreateWith starts a conversation from a template (model, agent, project…).
+// Inside a project the project's agent and documents apply by default.
+func (s *Store) CreateWith(c Conversation) (Conversation, error) {
+	if c.ProjectID != "" {
+		if p, err := s.GetProject(c.ProjectID); err == nil {
+			if c.AgentID == "" {
+				c.AgentID = p.AgentID
+			}
+			if c.CollectionID == "" {
+				c.CollectionID = p.CollectionID
+			}
+		}
+	}
+	if a, ok := s.agentFor(c); ok && c.CollectionID == "" {
+		c.CollectionID = a.CollectionID
+	}
 	t := now()
-	c := Conversation{ID: uuid.NewString(), Title: DefaultTitle, ModelID: modelID, SystemPrompt: systemPrompt,
-		CreatedAt: t, UpdatedAt: t}
-	_, err := s.db.Exec(`INSERT INTO conversations (id, title, model_id, system_prompt, pinned, created_at, updated_at)
-VALUES (?, ?, ?, ?, 0, ?, ?)`, c.ID, c.Title, c.ModelID, c.SystemPrompt, c.CreatedAt, c.UpdatedAt)
+	c.ID, c.Title, c.CreatedAt, c.UpdatedAt = uuid.NewString(), DefaultTitle, t, t
+	_, err := s.db.Exec(`INSERT INTO conversations (id, title, model_id, system_prompt, pinned, collection_id, agent_id, project_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`, c.ID, c.Title, c.ModelID, c.SystemPrompt, c.CollectionID, c.AgentID, c.ProjectID, c.CreatedAt, c.UpdatedAt)
 	return c, err
 }
 
@@ -219,9 +258,13 @@ func (s *Store) UpdateMessage(m Message) error {
 	if m.Sources == nil {
 		m.Sources = []Source{}
 	}
+	if m.Attachments == nil {
+		m.Attachments = []string{}
+	}
 	src, _ := json.Marshal(m.Sources)
-	_, err := s.db.Exec(`UPDATE messages SET content = ?, reasoning = ?, tps = ?, tokens = ?, error = ?, sources = ? WHERE id = ?`,
-		m.Content, m.Reasoning, m.TPS, m.Tokens, m.Error, string(src), m.ID)
+	att, _ := json.Marshal(m.Attachments)
+	_, err := s.db.Exec(`UPDATE messages SET content = ?, reasoning = ?, tps = ?, tokens = ?, error = ?, sources = ?, attachments = ? WHERE id = ?`,
+		m.Content, m.Reasoning, m.TPS, m.Tokens, m.Error, string(src), string(att), m.ID)
 	return err
 }
 

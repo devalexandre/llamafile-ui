@@ -1,4 +1,4 @@
-import { Brain, Code2, Cpu, Eye, HardDrive, ImagePlus, Layers, MemoryStick, MessageSquare, Mic, MonitorSmartphone, RefreshCw, Sparkles, Zap } from "lucide-react";
+import { Brain, Code2, Cpu, Eye, HardDrive, ImagePlus, Layers, MemoryStick, MessageSquare, Mic, MonitorSmartphone, RefreshCw, Sparkles, Volume2, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ModelCard, speedText } from "../components/ModelCard";
 import { Button, Card, IconButton, Segmented, Switch } from "../components/ui";
@@ -15,6 +15,7 @@ const categoryIcons: Record<string, React.ReactNode> = {
   image: <ImagePlus className="size-3.5" />,
   voice: <Mic className="size-3.5" />,
   embedding: <Layers className="size-3.5" />,
+  tts: <Volume2 className="size-3.5" />,
 };
 
 const categories = [
@@ -25,11 +26,13 @@ const categories = [
   { id: "image", label: "Imagens", description: "Geram imagens a partir de uma descrição em texto." },
   { id: "voice", label: "Voz", description: "Transcrição de áudio e ditado com Whisper." },
   { id: "embedding", label: "Embeddings", description: "Indexam seus documentos para o chat responder com base neles." },
+  { id: "tts", label: "Leitura em voz alta", description: "Vozes para ouvir as respostas do chat." },
 ];
 
 const categoryNotes: Record<string, string> = {
   image: "Modelos de imagem rodam com o diffusionfile, na CPU (ou Metal no Mac). Os tempos abaixo são estimados para este computador.",
   voice: "Modelos de voz rodam com o whisperfile, na CPU. \u201cTempo real\u201d significa que 1 minuto de áudio leva ~1 minuto para transcrever.",
+  tts: "Vozes do Piper: leves (~60 MB), rodam na CPU bem mais rápido que o tempo real. Precisam do Piper, instalado em Configurações → Ferramentas.",
   embedding: "Usados na página Documentos. Modelos multilíngues funcionam melhor com textos em português.",
 };
 
@@ -190,7 +193,8 @@ export function DiscoverPage() {
                       {best.fit.mode}).
                     </li>
                     <li>
-                      Velocidade estimada: {speedText(best)} ({best.fit.speedLabel.toLowerCase()}).
+                      {best.fit.measured ? "Velocidade medida aqui" : best.fit.calibrated ? "Velocidade estimada, calibrada pelas suas medições" : "Velocidade estimada"}:{" "}
+                      {speedText(best)} ({best.fit.speedLabel.toLowerCase()}).
                     </li>
                     <li>Qualidade {Math.round(best.fit.qualityScore)}/100 para {cat.label.toLowerCase()} na quantização {best.fit.quant}.</li>
                     <li>Pontuação geral {Math.round(best.fit.score)} — equilíbrio entre qualidade, velocidade e folga de memória.</li>

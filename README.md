@@ -24,7 +24,7 @@
 
 - **Privado de verdade:** conversas, documentos, áudios e imagens nunca saem do seu computador.
 - **Sem configuração:** o app baixa o llamafile e os modelos para você e escolhe o que cabe no seu hardware.
-- **Tudo em um lugar:** chat, geração de imagens, transcrição de voz e perguntas sobre seus documentos.
+- **Tudo em um lugar:** chat, geração e edição de imagens, transcrição de voz, leitura em voz alta e perguntas sobre seus documentos.
 - **Feito para modelos pequenos e rápidos:** um catálogo curado de modelos que rodam bem em notebooks e desktops comuns.
 
 ## Recursos
@@ -34,6 +34,13 @@ Respostas em streaming com markdown e código destacado, raciocínio ("thinking"
 imagens em modelos de visão (anexar ou colar), parar, regenerar, editar e reenviar, e métricas
 de tokens/s. O histórico fica salvo e é **agrupado por data** (Hoje, Ontem, 7 dias…), com fixar,
 renomear, buscar no conteúdo, exportar para Markdown/JSON e **títulos gerados automaticamente**.
+
+O botão **+** da caixa de mensagem junta tudo no chat, sem tirar as páginas dedicadas:
+- **Arquivos:** anexe PDF, Word, texto ou código (o conteúdo vai junto da pergunta), imagens
+  (para modelos de visão) ou áudio, que é transcrito para o texto da mensagem. Também dá para arrastar.
+- **Gerar imagem:** escreva "crie uma imagem de…" (ou use *+ → Gerar imagem*) e a imagem aparece na
+  conversa. Com uma imagem anexada, "transforme…", "deixe o céu roxo…" a usam como referência.
+- **Ouvir:** o ícone de alto-falante lê a resposta em voz alta; a leitura automática é opcional.
 
 ### 🧭 Descobrir modelos — o que roda bem na sua máquina
 O app detecta CPU, RAM, GPU/VRAM (NVIDIA, AMD e Apple Silicon) e, para cada modelo, calcula a
@@ -45,8 +52,25 @@ categoria. Em cada categoria ele destaca a **melhor escolha para o seu computado
 ### 🎨 Imagens
 Geração local com SD-Turbo, SDXL-Turbo, Stable Diffusion 1.5, Z-Image Turbo e FLUX.1 schnell.
 Formatos e tamanhos, passos/CFG/seed, **decodificação rápida (TAESD)**, progresso com tempo
-estimado e uma galeria para reutilizar, salvar ou "perguntar no chat". O botão **Melhorar prompt**
-usa o modelo de chat local para traduzir e detalhar sua descrição em inglês.
+estimado e uma galeria para reutilizar, salvar, excluir ou "perguntar no chat". O botão **Melhorar prompt**
+usa o modelo de chat local para traduzir e detalhar sua descrição em inglês. Uma **imagem de
+referência** (escolhida, arrastada ou uma da galeria) é alterada seguindo a descrição, com
+intensidade ajustável e mantendo a proporção (img2img).
+
+**Imagens na GPU:** o `diffusionfile` do llamafile 0.10.x roda só na CPU. Em *Configurações →
+Ferramentas* você pode baixar o **stable-diffusion.cpp** (o projeto original do diffusionfile) com
+GPU — Vulkan no Linux e no Windows (NVIDIA, AMD e Intel), Metal no Mac com Apple Silicon. Ele usa
+os mesmos modelos; no modo *Automático* o app passa a usá-lo assim que é instalado. Numa RTX 2060
+o SD-Turbo cai de ~20 s para ~2 s por imagem.
+
+### 🎬 Vídeos
+Na mesma página (chave **Imagem / Vídeo**) ou no chat ("crie um vídeo de…", *+ → Gerar vídeo*):
+- **Wan 2.1 1.3B** — texto → vídeo, leve.
+- **Wan 2.2 5B Turbo** — texto → vídeo ou **anima uma imagem de referência** (primeiro quadro), em 4 passos.
+
+Duração de 1 a 5 s (os modelos foram treinados com clipes de até ~5 s), proporção e resolução
+(480 a 832), passos e formato do arquivo (WebM, WebP animado ou AVI). Vídeo exige bem mais
+memória: use o stable-diffusion.cpp com GPU. Numa RTX 2060, 2 s em 480p levam de 2 a 3 minutos.
 
 <p align="center"><img src="docs/screenshots/images.png" width="760" alt="Geração de imagens" /></p>
 
@@ -56,6 +80,22 @@ arquivos WAV, MP3, OGG ou FLAC, escolha o idioma, copie, exporte `.txt` ou legen
 resuma no chat. Usa os modelos Whisper; o áudio gravado é apagado depois da transcrição.
 
 <p align="center"><img src="docs/screenshots/voice.png" width="760" alt="Transcrição de voz" /></p>
+
+**Transcrição na GPU e vídeos:** o `whisperfile` do llamafile roda só na CPU. Em *Configurações →
+Ferramentas* dá para baixar o **whisper.cpp com GPU** (Vulkan no Linux e no Windows, Metal no Mac),
+compilado pelo CI deste projeto e anexado às releases. Numa RTX 2060, 69 s de fala levam 3 s com o
+Large v3 Turbo, contra ~100 s do Base na CPU. A decodificação padrão é a gulosa (bem mais rápida); a
+busca em feixe fica na opção *Precisão máxima*. Com o `ffmpeg` instalado, também é possível
+transcrever **vídeos** (MP4, MKV, MOV, WebM…). As recomendações de voz levam a GPU em conta e
+evitam modelos mais lentos que o tempo real.
+
+### 🔊 Leitura em voz alta
+As respostas do chat podem ser ouvidas com vozes neurais do [Piper](https://github.com/rhasspy/piper)
+(Faber, Cadu e Jeff em português, além de inglês e espanhol). O Piper é instalado em
+*Configurações → Ferramentas*, as vozes em *Descobrir → Leitura em voz alta*, e roda na CPU bem
+mais rápido que o tempo real: a fala começa enquanto o resto ainda está sendo gerado. Código,
+links e tabelas são simplificados antes da leitura. Velocidade e leitura automática ficam em
+*Configurações*.
 
 ### 📚 Documentos (RAG)
 Crie coleções com PDF, Word (.docx), Markdown, texto, HTML ou código. Os arquivos são indexados
@@ -205,8 +245,10 @@ o ícone da bandeja só aparece com a extensão
 | Raciocínio | DeepSeek R1 Distill (1.5B, 7B), Qwen3, Phi-4 mini, gpt-oss 20B |
 | Visão | Gemma 3 4B, Qwen2.5 VL 3B, SmolVLM2 2.2B |
 | Imagens | SD-Turbo, SDXL-Turbo, Stable Diffusion 1.5, Z-Image Turbo, FLUX.1 schnell |
+| Vídeos | Wan 2.1 1.3B (texto → vídeo), Wan 2.2 5B Turbo (texto ou imagem → vídeo) |
 | Voz | Whisper Tiny, Base, Small, Medium e Large v3 Turbo |
 | Embeddings | Qwen3 Embedding 0.6B, BGE-M3, Nomic Embed v1.5 |
+| Leitura em voz alta | Piper: Faber, Cadu e Jeff (pt-BR), Amy e Lessac (en-US), Davefx (es-ES) |
 
 Arquivos `.gguf` colocados manualmente na pasta de modelos também aparecem em *Meus modelos* e
 podem ser usados no chat.
@@ -222,11 +264,17 @@ GGUF/llamafile e sem dependências externas (`internal/catalog/fit.go`):
 | Onde roda | GPU se cabe na VRAM; GPU+CPU se cabe em VRAM+RAM; senão CPU (Apple: memória unificada) |
 | Encaixe | uso ≤ 60% roda perfeitamente · ≤ 85% roda bem · ≤ 98% no limite · acima disso não cabe |
 | Velocidade (texto) | largura de banda da memória ÷ bytes lidos por token × eficiência (MoE conta só os parâmetros ativos) |
-| Velocidade (imagem/voz) | segundos por imagem e fator de tempo real, calibrados em execuções reais |
+| Velocidade (imagem/voz) | segundos por imagem e fator de tempo real, calibrados em execuções reais; GPU só quando o build da ferramenta tem backend de GPU (detectado pelos logs) |
+| Calibração | cada resposta, imagem e transcrição mede a velocidade real; o modelo medido mostra "medido" e os demais do mesmo tipo são ajustados pela mediana ("calibrado") |
 | Nota final | média ponderada de qualidade, velocidade, encaixe e contexto, com pesos por categoria |
 
 Se o llamafile instalado for a versão leve, as recomendações assumem CPU e o app sugere a versão
 completa para aproveitar a GPU.
+
+O botão **Medir** em *Meus modelos* roda um benchmark curto (160 tokens) e as medições ficam em
+*Configurações → Medições de velocidade*, por hardware: trocar de GPU ou de RAM descarta as antigas.
+Em *Configurações → Ferramentas*, o app mostra se o `whisperfile` e o `diffusionfile` instalados usam
+GPU ou só CPU, e avisa quando há uma versão nova.
 
 ## Privacidade
 
@@ -313,13 +361,16 @@ internal/
   eventbus/                eventos Go → frontend por long-polling HTTP
   catalog/                 catálogo embutido + fit engine (recomendação)
   hardware/                detecção de CPU/RAM/GPU por sistema operacional
-  tools/                   llamafile, whisperfile e diffusionfile: release, download, execução via sh
+  tools/                   llamafile, whisperfile, diffusionfile e stable-diffusion.cpp: release, download, execução
+  archive/                 extração segura de .zip e .tar.gz
   runtime/                 servidores llamafile (chat e embeddings): iniciar, health-check, parar
   downloads/               downloads retomáveis
   chat/                    SQLite das conversas + streaming da API OpenAI + RAG no prompt
   rag/                     extração de texto, chunks, embeddings e busca por similaridade
   imagegen/                geração com diffusionfile, progresso e galeria
   voice/                   gravação do microfone (miniaudio) e transcrição com whisperfile
+  tts/                     Piper: instalação, limpeza do markdown e reprodução em streaming
+  bench/                   medições de velocidade e capacidades (GPU) das ferramentas
   settings/, paths/        preferências e diretórios do app
 frontend/src/
   pages/                   Chat, Imagens, Transcrição, Documentos, Descobrir, Meus modelos, Configurações
@@ -338,16 +389,14 @@ com checksums SHA-256.
 
 ## Próximos passos
 
-- Benchmark real de tok/s na sua máquina para refinar as estimativas.
-- GPU no `whisperfile`/`diffusionfile` quando a release passar a incluir.
-- Leitura das respostas em voz alta (TTS).
+- Escolher a voz automaticamente pelo idioma da resposta.
 
 ## Créditos
 
 Construído sobre projetos incríveis: [llamafile](https://github.com/mozilla-ai/llamafile)
 (Mozilla AI), [llama.cpp](https://github.com/ggml-org/llama.cpp),
 [whisper.cpp](https://github.com/ggml-org/whisper.cpp),
-[stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp), [Wails](https://wails.io)
+[stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) (leejet), [Piper](https://github.com/rhasspy/piper), [Wails](https://wails.io)
 e [miniaudio](https://miniaud.io). Recomendações inspiradas no [llmfit](https://github.com/AlexsJones/llmfit);
 tema inspirado no [Dracula](https://draculatheme.com) e no [One Dark](https://github.com/atom/atom/tree/master/packages/one-dark-ui).
 Os modelos pertencem aos seus autores e seguem as respectivas licenças.

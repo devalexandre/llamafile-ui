@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, on } from "./api";
 import type {
+  Agent,
+  Project,
   ChatDraft,
   Collection,
   Conversation,
@@ -45,13 +47,20 @@ interface AppState {
   catalogRevision: number;
   conversations: Conversation[];
   collections: Collection[];
+  agents: Agent[];
+  projects: Project[];
+  /** Project shown in the Projects page ("" = list). */
+  projectId: string;
+  openProject: (id: string) => void;
   search: string;
   setSearch: (s: string) => void;
 
   /** Installed models usable in the chat. */
   chatModels: ModelView[];
   voiceModels: ModelView[];
+  ttsModels: ModelView[];
   imageModels: ModelView[];
+  videoModels: ModelView[];
   embedModels: ModelView[];
   toast: (text: string, kind?: Toast["kind"]) => void;
   toasts: Toast[];
@@ -79,7 +88,10 @@ function applyTheme(theme: Settings["theme"] | undefined) {
 const toolNames: Record<string, string> = {
   "tool:llamafile": "llamafile",
   "tool:whisperfile": "whisperfile",
+  "tool:whisper-gpu": "whisper.cpp (GPU)",
   "tool:diffusionfile": "diffusionfile",
+  "tool:sd-cpp": "stable-diffusion.cpp (GPU)",
+  "tool:piper": "Piper",
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -98,6 +110,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [catalogRevision, setCatalogRevision] = useState(0);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectId, setProjectId] = useState("");
   const [search, setSearch] = useState("");
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -113,6 +128,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const loadCollections = useCallback(() => {
     api.collections().then((l) => setCollections(l ?? [])).catch(() => {});
+  }, []);
+
+  const loadAgents = useCallback(() => {
+    api.agents().then((l) => setAgents(l ?? [])).catch(() => {});
+  }, []);
+
+  const loadProjects = useCallback(() => {
+    api.projects().then((l) => setProjects(l ?? [])).catch(() => {});
   }, []);
 
   const loadTools = useCallback(() => {
@@ -144,8 +167,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     api.hardware().then(setHardware);
     loadTools();
     loadCollections();
+    loadAgents();
+    loadProjects();
     refreshCatalog();
-  }, [refreshCatalog, loadTools, loadCollections]);
+  }, [refreshCatalog, loadTools, loadCollections, loadAgents, loadProjects]);
 
   useEffect(loadConversations, [loadConversations]);
 
@@ -168,6 +193,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }),
       on("chat:conversations", loadConversations),
       on("docs:changed", loadCollections),
+      on("agents:changed", loadAgents),
+      on("projects:changed", loadProjects),
       // "Nova conversa" in the system tray menu.
       on("app:new-chat", () => {
         setChatDraft(null);
@@ -176,7 +203,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }),
     ];
     return () => offs.forEach((off) => off());
-  }, [refreshCatalog, loadConversations, loadCollections, loadTools, toast]);
+  }, [refreshCatalog, loadConversations, loadCollections, loadTools, loadAgents, loadProjects, toast]);
 
   // Follow the OS theme when set to "system".
   useEffect(() => {
@@ -212,7 +239,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const chatModels = useMemo(() => by((m) => m.runtime === "llamafile" && !m.categories.includes("embedding")), [by]);
   const voiceModels = useMemo(() => by((m) => m.categories.includes("voice"), settings?.voiceModelId), [by, settings?.voiceModelId]);
+  const ttsModels = useMemo(() => by((m) => m.categories.includes("tts"), settings?.ttsVoiceId), [by, settings?.ttsVoiceId]);
   const imageModels = useMemo(() => by((m) => m.categories.includes("image"), settings?.imageModelId), [by, settings?.imageModelId]);
+  const videoModels = useMemo(() => by((m) => m.categories.includes("video"), settings?.videoModelId), [by, settings?.videoModelId]);
   const embedModels = useMemo(() => by((m) => m.categories.includes("embedding"), settings?.embedModelId), [by, settings?.embedModelId]);
 
   const value: AppState = {
@@ -252,11 +281,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     catalogRevision,
     conversations,
     collections,
+    agents,
+    projects,
+    projectId,
+    openProject: (id) => {
+      setProjectId(id);
+      setPage("projects");
+    },
     search,
     setSearch,
     chatModels,
     voiceModels,
+    ttsModels,
     imageModels,
+    videoModels,
     embedModels,
     toast,
     toasts,

@@ -2,6 +2,10 @@
 import { Browser } from "@wailsio/runtime";
 import * as App from "../../bindings/github.com/devalexandre/llamafile-ui/app";
 import type {
+  Agent,
+  Project,
+  BenchRecord,
+  BenchResult,
   Category,
   Collection,
   Conversation,
@@ -48,9 +52,47 @@ export const api = {
   cancelDownload: (key: string) => App.CancelDownload(key),
   removeModel: (id: string) => App.RemoveModel(id),
 
+  // agents & projects
+  agents: () => call<Agent[]>(App.ListAgents()),
+  saveAgent: (a: Partial<Agent>) => call<Agent>(App.SaveAgent(a as never)),
+  deleteAgent: (id: string) => App.DeleteAgent(id),
+  projects: () => call<Project[]>(App.ListProjects()),
+  saveProject: (p: Partial<Project>) => call<Project>(App.SaveProject(p as never)),
+  deleteProject: (id: string, withConversations: boolean) => App.DeleteProject(id, withConversations),
+  projectConversations: (id: string) => call<Conversation[]>(App.ListProjectConversations(id)),
+  setConversationAgent: (id: string, agentId: string) => App.SetConversationAgent(id, agentId),
+  moveConversation: (id: string, projectId: string) => App.MoveConversation(id, projectId),
+  sendWith: (req: {
+    conversationId: string;
+    modelId: string;
+    collectionId: string;
+    agentId: string;
+    projectId: string;
+    text: string;
+    attachments: string[];
+  }) => call<Conversation>(App.SendMessageWith(req as never)),
+  speak: (id: string, text: string) => App.Speak(id, text),
+  stopSpeaking: () => App.StopSpeaking(),
+  speakingId: () => call<string>(App.SpeakingID()),
+  previewVoice: (id: string) => App.PreviewVoice(id),
+  pickChatFiles: () => call<string[]>(App.PickChatFiles()),
+  attachFiles: (paths: string[]) => call<string[]>(App.AttachFiles(paths)),
+  transcribeForChat: (path: string) => call<string>(App.TranscribeForChat(path)),
+  generateChatImage: (conversationId: string, modelId: string, text: string, reference = "") =>
+    call<Conversation>(App.GenerateChatImage(conversationId, modelId, text, reference)),
+  generateChatVideo: (conversationId: string, modelId: string, text: string, reference = "") =>
+    call<Conversation>(App.GenerateChatVideo(conversationId, modelId, text, reference)),
+  benchmarkModel: (id: string) => call<BenchResult>(App.BenchmarkModel(id)),
+  benchmarks: () => call<BenchRecord[]>(App.GetBenchmarks()),
+  resetBenchmarks: () => App.ResetBenchmarks(),
+
   // tools & runtime
   tools: () => call<ToolStatus[]>(App.GetTools()),
   downloadTool: (tool: string, thin = false) => App.DownloadTool(tool, thin),
+  removeTool: (tool: string) => App.RemoveTool(tool),
+  activeImageEngine: () => call<string>(App.ActiveImageEngine()),
+  activeVoiceEngine: () => call<string>(App.ActiveVoiceEngine()),
+  detectToolGPU: () => call<ToolStatus[]>(App.DetectToolGPU()),
   runtime: () => call<RuntimeStatus>(App.GetRuntimeStatus()),
   embedder: () => call<RuntimeStatus>(App.GetEmbedderStatus()),
   detectLlamafile: () => call<RuntimeStatus>(App.DetectLlamafile()),

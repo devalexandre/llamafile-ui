@@ -16,6 +16,10 @@ type ToolStatus struct {
 	Version     string `json:"version"`
 	Thin        bool   `json:"thin"`
 	Downloading bool   `json:"downloading"`
+	// Compute backends detected in the build (whisperfile and diffusionfile).
+	Backends []string `json:"backends"`
+	GPU      bool     `json:"gpu"`
+	Probed   bool     `json:"probed"`
 }
 
 func chmodExec(path string) error { return os.Chmod(path, 0o755) }
@@ -37,10 +41,14 @@ func (a *App) GetTools() []ToolStatus {
 			configured = a.settings.Get().LlamafilePath
 		}
 		path, version := tools.Find(t, configured)
-		out = append(out, ToolStatus{Tool: string(t), Installed: path != "", Path: path, Version: version,
-			Thin: tools.IsThin(path), Downloading: a.downloads.IsActive(tools.DownloadKey(t))})
+		s := ToolStatus{Tool: string(t), Installed: path != "", Path: path, Version: version, Backends: []string{},
+			Thin: tools.IsThin(path), Downloading: a.downloads.IsActive(tools.DownloadKey(t))}
+		if c, ok := a.toolGPU(t); ok && t != tools.Llamafile {
+			s.Backends, s.GPU, s.Probed = c.Backends, c.GPU, true
+		}
+		out = append(out, s)
 	}
-	return out
+	return append(out, a.whisperGPUStatus(), a.sdcppStatus(), a.piperStatus())
 }
 
 func (a *App) GetLatestRelease() tools.Release { return tools.LatestRelease(a.ctx) }
@@ -49,6 +57,15 @@ func (a *App) GetLatestRelease() tools.Release { return tools.LatestRelease(a.ct
 // release. thin only applies to llamafile (CPU-only build).
 func (a *App) DownloadTool(name string, thin bool) error {
 	t := tools.Tool(name)
+	if t == piperTool {
+		return a.downloadPiper()
+	}
+	if t == tools.SDCpp {
+		return a.downloadSDCpp()
+	}
+	if t == tools.WhisperGPU {
+		return a.downloadWhisperGPU()
+	}
 	rel := tools.LatestRelease(a.ctx)
 	url, dest, size, ok := tools.Target(rel, t, thin)
 	if !ok {
@@ -69,4 +86,10 @@ func (a *App) DownloadTool(name string, thin bool) error {
 // DownloadLlamafile is kept for the setup screen.
 func (a *App) DownloadLlamafile(thin bool) error {
 	return a.DownloadTool(string(tools.Llamafile), thin)
+}
+
+// DetectToolGPU re-checks the GPU backends of whisperfile and diffusionfile.
+func (a *App) DetectToolGPU() []ToolStatus {
+	a.detectToolGPU(true)
+	return a.GetTools()
 }

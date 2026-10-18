@@ -1,4 +1,4 @@
-export type Page = "chat" | "images" | "voice" | "documents" | "discover" | "library" | "settings";
+export type Page = "chat" | "projects" | "agents" | "images" | "voice" | "documents" | "discover" | "library" | "settings";
 
 export interface Hardware {
   os: string;
@@ -39,6 +39,13 @@ export interface Settings {
   imageModelId: string;
   fastDecode: boolean;
   closeToTray: boolean;
+  imageEngine: "auto" | "diffusionfile" | "sd-cpp";
+  voiceEngine: "auto" | "whisperfile" | "whisper-gpu";
+  voiceAccurate: boolean;
+  videoModelId: string;
+  ttsVoiceId: string;
+  ttsSpeed: number;
+  autoSpeak: boolean;
 }
 
 export type FitLevel = "perfect" | "good" | "marginal" | "tight";
@@ -62,6 +69,11 @@ export interface Fit {
   contextScore: number;
   score: number;
   category: string;
+  /** Speed measured on this machine for this model. */
+  measured: boolean;
+  /** Speed adjusted by measurements of other models. */
+  calibrated: boolean;
+  samples: number;
 }
 
 export interface ModelFile {
@@ -80,7 +92,7 @@ export interface ModelView {
   context: number;
   categories: string[];
   quality: Record<string, number>;
-  runtime: "llamafile" | "whisperfile" | "diffusionfile";
+  runtime: "llamafile" | "whisperfile" | "diffusionfile" | "piper";
   repo: string;
   license: string;
   tags: string[];
@@ -145,10 +157,40 @@ export interface Conversation {
   systemPrompt: string;
   pinned: boolean;
   collectionId: string;
+  agentId: string;
+  projectId: string;
   createdAt: number;
   updatedAt: number;
   preview: string;
   messageCount: number;
+}
+
+export interface Agent {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  systemPrompt: string;
+  /** "" = the model chosen in the chat. */
+  modelId: string;
+  /** < 0 = app default. */
+  temperature: number;
+  collectionId: string;
+  createdAt: number;
+  updatedAt: number;
+  uses: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  agentId: string;
+  collectionId: string;
+  createdAt: number;
+  updatedAt: number;
+  conversations: number;
 }
 
 export interface Message {
@@ -170,17 +212,42 @@ export interface ConversationDetail {
   conversation: Conversation;
   messages: Message[];
   generating: boolean;
+  generatingImage: boolean;
 }
 
 // ---------------------------------------------------------------- tools
 
 export interface ToolStatus {
-  tool: "llamafile" | "whisperfile" | "diffusionfile";
+  tool: "llamafile" | "whisperfile" | "whisper-gpu" | "diffusionfile" | "sd-cpp" | "piper";
   installed: boolean;
   path: string;
   version: string;
   thin: boolean;
   downloading: boolean;
+  backends: string[];
+  gpu: boolean;
+  probed: boolean;
+}
+
+export interface BenchRecord {
+  modelId: string;
+  quant: string;
+  kind: "llm" | "image" | "voice";
+  mode: string;
+  ratio: number;
+  value: number;
+  promptTps: number;
+  samples: number;
+  updatedAt: number;
+}
+
+export interface BenchResult {
+  modelId: string;
+  tps: number;
+  promptTps: number;
+  estimateTps: number;
+  tokens: number;
+  mode: string;
 }
 
 // ---------------------------------------------------------------- voice
@@ -252,6 +319,13 @@ export interface ImageRequest {
   seed: number;
   sampler: string;
   fastDecode: boolean;
+  /** Reference image to transform (attachment name); "" = text-to-image. */
+  initImage: string;
+  strength: number;
+  video: boolean;
+  frames: number;
+  fps: number;
+  format: "webm" | "webp" | "avi";
 }
 
 export interface ImageItem {
@@ -269,6 +343,11 @@ export interface ImageItem {
   file: string;
   durationMs: number;
   createdAt: number;
+  reference: string;
+  strength: number;
+  kind: "image" | "video";
+  frames: number;
+  fps: number;
 }
 
 export interface ImageProgress {
@@ -288,6 +367,10 @@ export interface ImageDefaults {
   sampler: string;
   negative: boolean;
   taesd: boolean;
+  video: boolean;
+  frames: number;
+  fps: number;
+  imageInput: boolean;
 }
 
 /** Content handed to the chat from other pages ("send to chat"). */
@@ -295,4 +378,8 @@ export interface ChatDraft {
   text?: string;
   attachments?: string[];
   collectionId?: string;
+  /** New conversation answered by this agent. */
+  agentId?: string;
+  /** New conversation inside this project. */
+  projectId?: string;
 }

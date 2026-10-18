@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	goruntime "runtime"
 	"strings"
 	"sync"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
+	"github.com/devalexandre/llamafile-ui/internal/bench"
 	"github.com/devalexandre/llamafile-ui/internal/catalog"
 	"github.com/devalexandre/llamafile-ui/internal/chat"
 	"github.com/devalexandre/llamafile-ui/internal/downloads"
@@ -23,6 +25,7 @@ import (
 	"github.com/devalexandre/llamafile-ui/internal/runtime"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
 	"github.com/devalexandre/llamafile-ui/internal/tools"
+	"github.com/devalexandre/llamafile-ui/internal/tts"
 	"github.com/devalexandre/llamafile-ui/internal/voice"
 )
 
@@ -47,23 +50,29 @@ type App struct {
 	images    *imagegen.Generator
 	voice     *voice.Store
 	recorder  voice.Recorder
+	bench     *bench.Store
+	speaker   tts.Speaker
 
 	hwOnce sync.Once
 	hwMu   sync.RWMutex
 	hw     hardware.Info
 
 	mu              sync.Mutex
-	pendingTools    map[string]string // download key → destination
+	pendingTools    map[string]string       // download key → destination
+	chatImages      map[string]chatImageJob // image job → chat message waiting for it
+	imagePending    map[string]bool         // conversations waiting for an image
 	transcribeAbort context.CancelFunc
 }
 
 func NewApp() (*App, error) {
-	a := &App{settings: settings.Load(), downloads: downloads.New(), pendingTools: map[string]string{}, bus: eventbus.New()}
+	a := &App{settings: settings.Load(), downloads: downloads.New(), pendingTools: map[string]string{}, chatImages: map[string]chatImageJob{}, imagePending: map[string]bool{}, bus: eventbus.New()}
 	cat, err := catalog.New(func() string { return a.settings.Get().ModelsDir })
 	if err != nil {
 		return nil, err
 	}
 	a.catalog = cat
+	a.bench = bench.Open(filepath.Join(paths.DataDir(), "benchmarks.json"), a.hardware())
+	cat.SetCalibrator(a.bench.Calibrator())
 	a.runtime = runtime.New(a.settings, cat, runtime.ChatRole)
 	a.embedder = runtime.New(a.settings, cat, runtime.EmbedRole)
 
@@ -77,7 +86,10 @@ func NewApp() (*App, error) {
 		Delta: func(conv string, id int64, content, reasoning string) {
 			a.emit("chat:delta", map[string]any{"conversationId": conv, "messageId": id, "content": content, "reasoning": reasoning})
 		},
-		Done:          func(m chat.Message) { a.emit("chat:done", m) },
+		Done: func(m chat.Message) {
+			a.emit("chat:done", m)
+			a.observeChat(m)
+		},
 		Conversations: func() { a.emit("chat:conversations") },
 		Status: func(conv, status string) {
 			a.emit("chat:status", map[string]string{"conversationId": conv, "status": status})
@@ -96,10 +108,20 @@ func NewApp() (*App, error) {
 	}
 	if a.images, err = imagegen.New(db, paths.ImagesDir(), be, imagegen.Events{
 		Progress: func(p imagegen.Progress) { a.emit("image:progress", p) },
-		Done:     func(job string, img imagegen.Image) { a.emit("image:done", map[string]any{"jobId": job, "image": img}) },
-		Error:    func(job, msg string) { a.emit("image:error", map[string]string{"jobId": job, "error": msg}) },
+		Done: func(job string, img imagegen.Image) {
+			a.emit("image:done", map[string]any{"jobId": job, "image": img})
+			a.observeImage(img)
+			a.chatImageFinished(job, &img, "")
+		},
+		Error: func(job, msg string) {
+			a.emit("image:error", map[string]string{"jobId": job, "error": msg})
+			a.chatImageFinished(job, nil, msg)
+		},
 	}); err != nil {
 		return nil, err
+	}
+	a.speaker.OnState = func(id string, playing bool, err string) {
+		a.emit("tts:state", map[string]any{"id": id, "playing": playing, "error": err})
 	}
 	a.recorder.OnLevel = func(level float64, elapsed time.Duration) {
 		a.emit("voice:level", map[string]float64{"level": level, "elapsed": elapsed.Seconds()})
@@ -132,6 +154,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 
 	go func() {
 		a.hardware()
+		a.detectToolGPU(false)
 		cfg := a.settings.Get()
 		if cfg.AutoStart && cfg.LastModelID != "" && a.catalog.ModelPath(cfg.LastModelID) != "" &&
 			a.runtime.Status().State == runtime.StateStopped {
@@ -146,6 +169,7 @@ func (a *App) ServiceShutdown() error {
 	a.chat.StopAll()
 	a.images.Cancel()
 	a.recorder.Cancel()
+	a.speaker.Stop()
 	a.CancelTranscription()
 	a.runtime.Stop()
 	a.embedder.Stop()
@@ -170,9 +194,18 @@ func (a *App) hardware() hardware.Info {
 // no GPU support, so recommendations must assume CPU.
 func (a *App) fitHardware() hardware.Info {
 	hw := a.hardware()
-	if a.runtime.Status().Thin && !hw.UnifiedMemory {
-		hw.VRAMGB, hw.UsableVRAMGB, hw.GPUBandwidthGBps = 0, 0, 0
+	if _, engine := a.voiceBinary(); engine != "" {
+		if c, ok := a.toolGPU(engine); ok {
+			hw.WhisperGPU = c.GPU
+		}
 	}
+	if _, engine := a.imageBinary(); engine != "" {
+		if c, ok := a.toolGPU(engine); ok {
+			hw.DiffusionGPU = c.GPU
+		}
+	}
+	// The thin llamafile only affects LLMs: image and voice tools may still use the GPU.
+	hw.LLMCPUOnly = a.runtime.Status().Thin
 	return hw
 }
 
@@ -337,8 +370,10 @@ func (a *App) downloadDone(key string, err error) {
 			}
 		}
 		a.emit("tools:changed")
+		go a.detectToolGPU(false)
 	} else if id, ok := strings.CutPrefix(key, modelKeyPrefix); ok && err == nil {
 		a.modelDownloaded(id)
+		go a.detectToolGPU(false) // a Whisper model enables probing whisperfile
 	}
 	a.emit("downloads:done", map[string]string{"key": key, "error": errMsg})
 	a.emit("catalog:changed")
@@ -357,6 +392,8 @@ func (a *App) modelDownloaded(id string) {
 			s.LastModelID = id
 		case m.HasCategory("voice") && s.VoiceModelID == "":
 			s.VoiceModelID = id
+		case m.HasCategory("tts") && s.TTSVoiceID == "":
+			s.TTSVoiceID = id
 		case m.HasCategory("embedding") && s.EmbedModelID == "":
 			s.EmbedModelID = id
 		case m.HasCategory("image") && s.ImageModelID == "":
@@ -421,6 +458,15 @@ func (a *App) GetLogs() []string    { return a.runtime.Logs() }
 
 // toolInstalled finishes a tool download (chmod, select, re-detect).
 func (a *App) toolInstalled(key, dest string) error {
+	if key == tools.DownloadKey(piperTool) {
+		return tts.Install(dest)
+	}
+	if key == tools.DownloadKey(tools.WhisperGPU) {
+		return tools.InstallWhisperGPU(dest)
+	}
+	if key == tools.DownloadKey(tools.SDCpp) {
+		return tools.InstallSDCpp(dest, sdcppVersion(dest))
+	}
 	if key == tools.DownloadKey(tools.Llamafile) {
 		if err := a.updateSettings(func(s *settings.Settings) { s.LlamafilePath = dest }); err != nil {
 			return err

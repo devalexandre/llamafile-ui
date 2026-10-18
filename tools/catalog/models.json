@@ -1213,5 +1213,362 @@
       "query_prefix": "",
       "doc_prefix": ""
     }
+  },
+  {
+    "id": "piper-pt-br-faber",
+    "name": "Faber (pt-BR)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 82
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "português",
+      "voz masculina",
+      "recomendada"
+    ],
+    "description": "Voz brasileira natural e clara, boa para ouvir respostas longas.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "pt-BR"
+    }
+  },
+  {
+    "id": "piper-pt-br-cadu",
+    "name": "Cadu (pt-BR)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 78
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "português",
+      "voz masculina"
+    ],
+    "description": "Voz brasileira jovem, ritmo um pouco mais rápido.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "pt/pt_BR/cadu/medium/pt_BR-cadu-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "pt/pt_BR/cadu/medium/pt_BR-cadu-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "pt-BR"
+    }
+  },
+  {
+    "id": "piper-pt-br-jeff",
+    "name": "Jeff (pt-BR)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 75
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "português",
+      "voz masculina"
+    ],
+    "description": "Voz brasileira grave e calma.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "pt/pt_BR/jeff/medium/pt_BR-jeff-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "pt/pt_BR/jeff/medium/pt_BR-jeff-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "pt-BR"
+    }
+  },
+  {
+    "id": "piper-en-us-amy",
+    "name": "Amy (en-US)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 70
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "inglês",
+      "voz feminina"
+    ],
+    "description": "Voz americana feminina, clara e expressiva.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "en/en_US/amy/medium/en_US-amy-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "en/en_US/amy/medium/en_US-amy-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "en-US"
+    }
+  },
+  {
+    "id": "piper-en-us-lessac",
+    "name": "Lessac (en-US)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 72
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "inglês",
+      "voz feminina"
+    ],
+    "description": "Uma das vozes mais naturais do Piper, em inglês americano.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "en/en_US/lessac/medium/en_US-lessac-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "en/en_US/lessac/medium/en_US-lessac-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "en-US"
+    }
+  },
+  {
+    "id": "piper-es-es-davefx",
+    "name": "Davefx (es-ES)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 68
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "espanhol",
+      "voz masculina"
+    ],
+    "description": "Voz espanhola masculina, boa dicção.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "es/es_ES/davefx/medium/es_ES-davefx-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "es/es_ES/davefx/medium/es_ES-davefx-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "es-ES"
+    }
+  },
+  {
+    "id": "wan21-t2v-1.3b",
+    "name": "Wan 2.1 1.3B",
+    "publisher": "Alibaba (Wan-AI)",
+    "params_b": 1.3,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "video"
+    ],
+    "quality": {
+      "video": 62
+    },
+    "runtime": "diffusionfile",
+    "repo": "samuelchristlie/Wan2.1-T2V-1.3B-GGUF",
+    "license": "Apache-2.0",
+    "tags": [
+      "texto → vídeo",
+      "leve"
+    ],
+    "description": "Vídeos curtos a partir de texto. O menor modelo de vídeo bom: cabe em GPUs de 4–6 GB.",
+    "quants": [
+      {
+        "quant": "Q4_K_M",
+        "file": "Wan2.1-T2V-1.3B-Q4_K_M.gguf"
+      },
+      {
+        "quant": "Q8_0",
+        "file": "Wan2.1-T2V-1.3B-Q8_0.gguf"
+      }
+    ],
+    "components": [
+      {
+        "role": "t5xxl",
+        "repo": "city96/umt5-xxl-encoder-gguf",
+        "file": "umt5-xxl-encoder-Q4_K_M.gguf"
+      },
+      {
+        "role": "vae",
+        "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+        "file": "split_files/vae/wan_2.1_vae.safetensors"
+      }
+    ],
+    "image": {
+      "main_flag": "diffusion-model",
+      "steps": 20,
+      "cfg": 6,
+      "width": 480,
+      "height": 272,
+      "sampler": "euler",
+      "diffusion_params_b": 1.3,
+      "vae_cost": 1,
+      "args": [
+        "--flow-shift",
+        "3"
+      ]
+    },
+    "video": {
+      "frames": 33,
+      "fps": 16,
+      "image_input": false
+    }
+  },
+  {
+    "id": "wan22-ti2v-5b-turbo",
+    "name": "Wan 2.2 5B Turbo",
+    "publisher": "Alibaba (Wan-AI)",
+    "params_b": 5,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "video"
+    ],
+    "quality": {
+      "video": 74
+    },
+    "runtime": "diffusionfile",
+    "repo": "hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF",
+    "license": "Apache-2.0",
+    "tags": [
+      "texto → vídeo",
+      "imagem → vídeo",
+      "4 passos"
+    ],
+    "description": "Gera vídeo a partir de texto ou anima uma imagem de referência. Versão Turbo: só 4 passos.",
+    "quants": [
+      {
+        "quant": "Q4_K_M",
+        "file": "Wan2_2-TI2V-5B-Turbo-Q4_K_M.gguf"
+      },
+      {
+        "quant": "Q3_K_M",
+        "file": "Wan2_2-TI2V-5B-Turbo-Q3_K_M.gguf"
+      },
+      {
+        "quant": "Q5_K_S",
+        "file": "Wan2_2-TI2V-5B-Turbo-Q5_K_S.gguf"
+      }
+    ],
+    "components": [
+      {
+        "role": "t5xxl",
+        "repo": "city96/umt5-xxl-encoder-gguf",
+        "file": "umt5-xxl-encoder-Q4_K_M.gguf"
+      },
+      {
+        "role": "vae",
+        "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+        "file": "split_files/vae/wan2.2_vae.safetensors"
+      }
+    ],
+    "image": {
+      "main_flag": "diffusion-model",
+      "steps": 4,
+      "cfg": 1,
+      "width": 640,
+      "height": 352,
+      "sampler": "euler",
+      "diffusion_params_b": 2.5,
+      "vae_cost": 1.5,
+      "args": []
+    },
+    "video": {
+      "frames": 49,
+      "fps": 24,
+      "image_input": true
+    }
   }
 ]

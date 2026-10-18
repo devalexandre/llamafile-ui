@@ -66,10 +66,26 @@ func (s *Service) IsGenerating(conversationID string) bool {
 	return ok
 }
 
+// SendRequest is a user message. Without ConversationID a new conversation is
+// created, optionally with an agent and inside a project.
+type SendRequest struct {
+	ConversationID string   `json:"conversationId"`
+	ModelID        string   `json:"modelId"`
+	CollectionID   string   `json:"collectionId"` // documents to ground the answer ("" = none)
+	AgentID        string   `json:"agentId"`      // new conversations only
+	ProjectID      string   `json:"projectId"`    // new conversations only
+	Text           string   `json:"text"`
+	Attachments    []string `json:"attachments"`
+}
+
 // Send stores the user message and starts streaming the assistant reply.
-// When conversationID is empty a new conversation is created. collectionID
-// selects documents to ground the answer ("" = none).
 func (s *Service) Send(conversationID, modelID, collectionID, text string, attachments []string) (Conversation, error) {
+	return s.SendWith(SendRequest{ConversationID: conversationID, ModelID: modelID, CollectionID: collectionID, Text: text, Attachments: attachments})
+}
+
+// SendWith is Send with agent and project support.
+func (s *Service) SendWith(r SendRequest) (Conversation, error) {
+	conversationID, modelID, collectionID, text, attachments := r.ConversationID, r.ModelID, r.CollectionID, r.Text, r.Attachments
 	text = strings.TrimSpace(text)
 	if text == "" && len(attachments) == 0 {
 		return Conversation{}, errors.New("mensagem vazia")
@@ -83,8 +99,9 @@ func (s *Service) Send(conversationID, modelID, collectionID, text string, attac
 
 	var conv Conversation
 	var err error
-	if conversationID == "" {
-		conv, err = s.store.Create(modelID, "")
+	isNew := conversationID == ""
+	if isNew {
+		conv, err = s.store.CreateWith(Conversation{ModelID: modelID, CollectionID: collectionID, AgentID: r.AgentID, ProjectID: r.ProjectID})
 		if err != nil {
 			return conv, err
 		}
@@ -95,7 +112,7 @@ func (s *Service) Send(conversationID, modelID, collectionID, text string, attac
 		_ = s.store.SetModel(conv.ID, modelID)
 		conv.ModelID = modelID
 	}
-	if conv.CollectionID != collectionID {
+	if !isNew && conv.CollectionID != collectionID {
 		_ = s.store.SetCollection(conv.ID, collectionID)
 		conv.CollectionID = collectionID
 	}
@@ -342,14 +359,21 @@ func (s *Service) buildHistory(conv Conversation, sources []Source) ([]apiMessag
 		if m.Role == "assistant" && (m.Content == "" || m.Error != "") {
 			continue
 		}
-		used += utf8.RuneCountInString(m.Content)
+		text := m.Content
+		if m.Role == "user" {
+			text = s.withDocuments(text, m.Attachments, budget/2)
+		}
+		used += utf8.RuneCountInString(text)
 		if used > budget && len(out) > 0 {
 			break
 		}
-		var content any = m.Content
-		if m.Role == "user" && vision && len(m.Attachments) > 0 {
+		var content any = text
+		if m.Role == "user" && vision && hasImages(m.Attachments) {
 			parts := []map[string]any{}
 			for _, a := range m.Attachments {
+				if IsDocument(a) {
+					continue
+				}
 				url, err := s.imageDataURL(a)
 				if err != nil {
 					continue
@@ -357,7 +381,7 @@ func (s *Service) buildHistory(conv Conversation, sources []Source) ([]apiMessag
 				used += 1000 // images cost hundreds of tokens
 				parts = append(parts, map[string]any{"type": "image_url", "image_url": map[string]string{"url": url}})
 			}
-			parts = append(parts, map[string]any{"type": "text", "text": m.Content})
+			parts = append(parts, map[string]any{"type": "text", "text": text})
 			content = parts
 		}
 		out = append(out, apiMessage{Role: m.Role, Content: content})
@@ -367,6 +391,9 @@ func (s *Service) buildHistory(conv Conversation, sources []Source) ([]apiMessag
 	}
 
 	system := conv.SystemPrompt
+	if a, ok := s.store.agentFor(conv); ok && system == "" {
+		system = a.SystemPrompt
+	}
 	if system == "" {
 		system = s.backend.DefaultSystemPrompt()
 	}
@@ -395,11 +422,15 @@ type streamChunk struct {
 }
 
 func (s *Service) stream(ctx context.Context, conv Conversation, msg *Message, messages []apiMessage) error {
+	temperature := s.backend.Temperature()
+	if a, ok := s.store.agentFor(conv); ok && a.Temperature >= 0 {
+		temperature = a.Temperature
+	}
 	body, _ := json.Marshal(map[string]any{
 		"model":       conv.ModelID,
 		"messages":    messages,
 		"stream":      true,
-		"temperature": s.backend.Temperature(),
+		"temperature": temperature,
 	})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.backend.BaseURL()+"/v1/chat/completions", bytes.NewReader(body))
 	if err != nil {

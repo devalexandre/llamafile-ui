@@ -16,7 +16,6 @@ import (
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
-	"github.com/devalexandre/llamafile-ui/internal/tools"
 )
 
 // backend implements the interfaces used by internal packages (chat, rag,
@@ -116,7 +115,10 @@ func (a *backend) Prefixes(modelID string) (doc, query string) {
 
 // ------------------------------------------------ imagegen.Backend interface
 
-func (a *backend) Binary() string { return a.toolPath(tools.Diffusion) }
+func (a *backend) Binary() string {
+	bin, _ := a.imageBinary()
+	return bin
+}
 
 func (a *backend) Model(id string) (imagegen.ModelSpec, error) {
 	m := a.catalog.Find(id)
@@ -140,6 +142,21 @@ func (a *backend) Estimate(req imagegen.Request) float64 {
 	if !ok && len(m.Files) > 0 {
 		f = m.Files[0]
 	}
+	if m.Video != nil {
+		frames := req.Frames
+		if frames <= 1 {
+			frames = m.Video.Frames
+		}
+		return a.calibratedImageSeconds(m, f, catalog.EstimateVideoSeconds(m, f, a.fitHardware(), req.Width, req.Height, frames, req.Steps))
+	}
 	_, hasTAESD := a.catalog.ComponentPaths(req.ModelID)["taesd"]
-	return catalog.EstimateImageSeconds(m, f, a.hardware(), req.Width, req.Height, req.Steps, req.FastDecode && hasTAESD)
+	if req.InitImage != "" {
+		// img2img only runs steps × strength denoising steps.
+		r := req
+		r.InitImage = a.referencePath(r.InitImage)
+		if imagegen.PrepareImg2Img(&r) == nil {
+			req.Width, req.Height, req.Steps = r.Width, r.Height, max(1, int(float64(r.Steps)*r.Strength+0.5))
+		}
+	}
+	return a.calibratedImageSeconds(m, f, catalog.EstimateImageSeconds(m, f, a.fitHardware(), req.Width, req.Height, req.Steps, req.FastDecode && hasTAESD))
 }

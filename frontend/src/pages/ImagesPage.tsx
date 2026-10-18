@@ -4,7 +4,9 @@ import {
   Copy,
   Dices,
   Download,
+  Film,
   ImagePlus,
+  ImageUp,
   Loader2,
   MessageSquare,
   RotateCcw,
@@ -17,7 +19,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ModelGate, ModelSelect, ToolGate } from "../components/Gates";
 import { Button, EmptyState, IconButton, Progress, Segmented, Sheet, Switch } from "../components/ui";
-import { api, imageURL, on } from "../lib/api";
+import { api, attachmentURL, imageURL, on, onFileDrop } from "../lib/api";
 import { duration } from "../lib/format";
 import { errorText, useApp } from "../lib/store";
 import type { ImageDefaults, ImageItem, ImageProgress, ImageRequest } from "../lib/types";
@@ -26,9 +28,26 @@ const sizes = [
   { value: "square", label: "Quadrado", w: 1, h: 1 },
   { value: "portrait", label: "Retrato", w: 2, h: 3 },
   { value: "landscape", label: "Paisagem", w: 3, h: 2 },
+  { value: "wide", label: "16:9", w: 16, h: 9 },
 ] as const;
 
-const phaseLabel: Record<ImageProgress["phase"], string> = {
+/** Video durations offered (seconds); models were trained on clips up to ~5 s. */
+const durations = [1, 2, 3, 5];
+
+/** Generated media: still image, playable video, or a file the webview cannot play (AVI). */
+function Media({ img, className, controls }: { img: ImageItem; className?: string; controls?: boolean }) {
+  if (img.kind !== "video" || img.file.endsWith(".webp")) return <img src={imageURL(img.file)} loading="lazy" className={className} />;
+  if (img.file.endsWith(".webm"))
+    return <video src={imageURL(img.file)} className={className} muted={!controls} controls={controls} autoPlay loop playsInline />;
+  return (
+    <div className={clsx("flex flex-col items-center justify-center gap-1 bg-field text-[12px] text-muted", className)}>
+      <Film className="size-8" />
+      Vídeo AVI — use “Salvar como…”
+    </div>
+  );
+}
+
+export const phaseLabel: Record<ImageProgress["phase"], string> = {
   loading: "Carregando o modelo…",
   encoding: "Entendendo o prompt…",
   sampling: "Gerando a imagem…",
@@ -49,13 +68,23 @@ function dims(shape: string, base: number) {
   return { width: Math.round((s.w * scale) / 64) * 64, height: Math.round((s.h * scale) / 64) * 64 };
 }
 
-function Lightbox({ img, onClose, onReuse }: { img: ImageItem; onClose: () => void; onReuse: (img: ImageItem) => void }) {
+function Lightbox({
+  img,
+  onClose,
+  onReuse,
+  onReference,
+}: {
+  img: ImageItem;
+  onClose: () => void;
+  onReuse: (img: ImageItem) => void;
+  onReference: (img: ImageItem) => void;
+}) {
   const app = useApp();
   const act = (fn: () => Promise<unknown>) => fn().catch((e) => app.toast(errorText(e), "error"));
   return (
     <Sheet open onClose={onClose} width={860}>
       <div className="flex gap-5">
-        <img src={imageURL(img.file)} className="max-h-[70vh] w-[520px] rounded-lg border border-line object-contain" />
+        <Media img={img} controls className="max-h-[70vh] w-[520px] rounded-lg border border-line object-contain" />
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-start justify-between gap-2">
             <div className="text-[13px] font-semibold">Detalhes</div>
@@ -78,12 +107,29 @@ function Lightbox({ img, onClose, onReuse }: { img: ImageItem; onClose: () => vo
             </dd>
             <dt className="text-muted">Seed</dt>
             <dd className="selectable">{img.seed}</dd>
+            {img.kind === "video" && (
+              <>
+                <dt className="text-muted">Duração</dt>
+                <dd>
+                  {(img.frames / Math.max(img.fps, 1)).toFixed(1)} s · {img.frames} quadros · {img.fps} fps
+                </dd>
+              </>
+            )}
             <dt className="text-muted">Tempo</dt>
             <dd>{duration(img.durationMs / 1000)}</dd>
           </dl>
+          {img.reference && (
+            <div className="mt-3">
+              <div className="mb-1 text-[12px] text-muted">Feita a partir de (intensidade {Math.round(img.strength * 100)}%)</div>
+              <img src={imageURL(img.reference)} className="max-h-24 rounded-md border border-line object-contain" />
+            </div>
+          )}
           <div className="mt-auto flex flex-wrap gap-2 pt-4">
             <Button size="sm" icon={<RotateCcw className="size-3.5" />} onClick={() => onReuse(img)}>
               Reutilizar
+            </Button>
+            <Button size="sm" icon={<ImageUp className="size-3.5" />} onClick={() => onReference(img)}>
+              Usar como referência
             </Button>
             <Button
               size="sm"
@@ -137,14 +183,16 @@ function Lightbox({ img, onClose, onReuse }: { img: ImageItem; onClose: () => vo
   );
 }
 
-function Generator() {
+function Generator({ video }: { video: boolean }) {
   const app = useApp();
-  const models = app.imageModels;
+  const models = video ? app.videoModels : app.imageModels;
   const [modelId, setModelId] = useState(models[0]?.id ?? "");
   const [defaults, setDefaults] = useState<ImageDefaults | null>(null);
   const [prompt, setPrompt] = useState("");
   const [negative, setNegative] = useState("");
-  const [shape, setShape] = useState<string>("square");
+  const [shape, setShape] = useState<string>(video ? "wide" : "square");
+  const [seconds, setSeconds] = useState(2);
+  const [format, setFormat] = useState<ImageRequest["format"]>("webm");
   const [base, setBase] = useState(512);
   const [steps, setSteps] = useState(1);
   const [cfg, setCfg] = useState(1);
@@ -157,6 +205,23 @@ function Generator() {
   const [progress, setProgress] = useState<ImageProgress | null>(null);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [open, setOpen] = useState<ImageItem | null>(null);
+  // Reference image (img2img): an attachment name and how much it may change.
+  const [reference, setReference] = useState("");
+  const [strength, setStrength] = useState(0.6);
+  useEffect(
+    () =>
+      onFileDrop(async (paths) => {
+        const img = paths.find((p) => /\.(png|jpe?g|webp|gif)$/i.test(p));
+        if (!img) return app.toast("Arraste uma imagem PNG, JPG, WebP ou GIF.");
+        try {
+          const [name] = await api.attachFiles([img]);
+          if (name) setReference(name);
+        } catch (e) {
+          app.toast(errorText(e), "error");
+        }
+      }),
+    [app],
+  );
 
   const model = models.find((m) => m.id === modelId);
   const size = dims(shape, base);
@@ -179,12 +244,33 @@ function Generator() {
       setSteps(d.steps);
       setCfg(d.cfg);
       setBase(Math.max(d.width, d.height));
+      if (d.video) {
+        setShape(d.width > d.height ? "wide" : "square");
+        setSeconds(Math.max(1, Math.round((d.frames - 1) / Math.max(d.fps, 1))));
+      }
     });
   }, [modelId]);
 
   const request = useMemo<ImageRequest>(
-    () => ({ modelId, prompt, negative, ...size, steps, cfg, seed, sampler: defaults?.sampler ?? "", fastDecode }),
-    [modelId, prompt, negative, size.width, size.height, steps, cfg, seed, defaults?.sampler, fastDecode], // eslint-disable-line react-hooks/exhaustive-deps
+    () => ({
+      modelId,
+      prompt,
+      negative,
+      ...size,
+      steps,
+      cfg,
+      seed,
+      sampler: defaults?.sampler ?? "",
+      fastDecode,
+      initImage: reference,
+      strength: reference && !video ? strength : 0,
+      video,
+      fps: defaults?.fps ?? 16,
+      // Wan models need 4n+1 frames.
+      frames: video ? Math.round((seconds * (defaults?.fps ?? 16)) / 4) * 4 + 1 : 0,
+      format,
+    }),
+    [modelId, prompt, negative, size.width, size.height, steps, cfg, seed, defaults?.sampler, fastDecode, reference, strength, video, seconds, format, defaults?.fps], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   useEffect(() => {
@@ -283,6 +369,62 @@ function Generator() {
             </Button>
           </div>
         </div>
+        <div className={clsx(video && !defaults?.imageInput && "hidden")}>
+          <div className="mb-1.5 text-[12px] font-semibold text-muted">
+            {video ? "Primeiro quadro (opcional)" : "Imagem de referência (opcional)"}
+          </div>
+          {reference ? (
+            <div className="rounded-[10px] border border-line bg-card p-2.5">
+              <div className="flex items-start gap-2.5">
+                <img src={attachmentURL(reference)} className="size-16 rounded-md border border-line object-cover" />
+                <div className="min-w-0 flex-1 text-[11.5px] text-muted">
+                  {video
+                    ? "O vídeo começa nesta imagem e a anima seguindo a descrição."
+                    : "O modelo vai alterar esta imagem seguindo a descrição, mantendo a composição e a proporção."}
+                </div>
+                <IconButton title="Remover referência" onClick={() => setReference("")}>
+                  <X className="size-4" />
+                </IconButton>
+              </div>
+              <label className={clsx("mt-2 flex items-center gap-2 text-[12px]", video && "hidden")}>
+                <span className="w-20 text-muted">Intensidade</span>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  value={strength}
+                  onChange={(e) => setStrength(Number(e.target.value))}
+                  className="flex-1 accent-[var(--accent)]"
+                />
+                <span className="w-9 text-right tabular-nums">{Math.round(strength * 100)}%</span>
+              </label>
+              {!video && <p className="mt-1 text-[11px] text-faint">Baixa: pequenos ajustes. Alta: muda quase tudo.</p>}
+            </div>
+          ) : (
+            <div
+              data-file-drop-target
+              className="flex items-center gap-2 rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[12px] text-muted [&.file-drop-target-active]:border-accent [&.file-drop-target-active]:bg-accent-soft"
+            >
+              <ImageUp className="size-4 shrink-0" />
+              <span className="flex-1">Arraste uma imagem ou</span>
+              <Button
+                size="sm"
+                variant="plain"
+                onClick={async () => {
+                  try {
+                    const names = await api.pickImages();
+                    if (names?.[0]) setReference(names[0]);
+                  } catch (e) {
+                    app.toast(errorText(e), "error");
+                  }
+                }}
+              >
+                Escolher…
+              </Button>
+            </div>
+          )}
+        </div>
         {defaults?.negative && (
           <div>
             <div className="mb-1.5 text-[12px] font-semibold text-muted">Evitar (prompt negativo)</div>
@@ -294,15 +436,32 @@ function Generator() {
             />
           </div>
         )}
-        <div>
-          <div className="mb-1.5 text-[12px] font-semibold text-muted">Formato</div>
-          <Segmented value={shape} onChange={setShape} options={sizes.map((s) => ({ value: s.value, label: s.label }))} />
+        {video && (
+          <div>
+            <div className="mb-1.5 text-[12px] font-semibold text-muted">Duração</div>
+            <Segmented
+              value={String(seconds)}
+              onChange={(v) => setSeconds(Number(v))}
+              options={durations.map((d) => ({ value: String(d), label: `${d} s` }))}
+            />
+            <p className="mt-1.5 text-[11px] text-faint">
+              {request.frames} quadros a {request.fps} fps. Os modelos foram treinados com até ~5 s; mais que isso perde coerência.
+            </p>
+          </div>
+        )}
+        <div className={clsx(reference && "hidden")}>
+          <div className="mb-1.5 text-[12px] font-semibold text-muted">Proporção</div>
+          <Segmented
+            value={shape}
+            onChange={setShape}
+            options={sizes.filter((s) => video || s.value !== "wide").map((s) => ({ value: s.value, label: s.label }))}
+          />
           <div className="mt-2 flex items-center gap-2 text-[12px] text-muted">
             Tamanho
             <Segmented
               value={String(base)}
               onChange={(v) => setBase(Number(v))}
-              options={[512, 768, 1024].map((n) => ({ value: String(n), label: String(n) }))}
+              options={(video ? [480, 640, 832] : [512, 768, 1024]).map((n) => ({ value: String(n), label: String(n) }))}
             />
             <span className="tabular-nums">
               {size.width}×{size.height}
@@ -310,6 +469,20 @@ function Generator() {
           </div>
         </div>
 
+        {video && (
+          <div>
+            <div className="mb-1.5 text-[12px] font-semibold text-muted">Formato do arquivo</div>
+            <Segmented
+              value={format}
+              onChange={(v) => setFormat(v as ImageRequest["format"])}
+              options={[
+                { value: "webm", label: "WebM" },
+                { value: "webp", label: "WebP animado" },
+                { value: "avi", label: "AVI" },
+              ]}
+            />
+          </div>
+        )}
         <button onClick={() => setAdvanced((a) => !a)} className="flex items-center gap-1 text-[12px] font-semibold text-muted hover:text-fg">
           <ChevronDown className={clsx("size-3.5 transition-transform", !advanced && "-rotate-90")} /> Avançado
         </button>
@@ -366,7 +539,7 @@ function Generator() {
               <div className="mb-2 flex items-center justify-between text-[12.5px]">
                 <span className="flex items-center gap-1.5 font-medium">
                   <Loader2 className="size-3.5 animate-spin text-accent" />
-                  {progress ? phaseLabel[progress.phase] : "Iniciando…"}
+                  {progress ? (video && progress.phase === "sampling" ? "Gerando o vídeo…" : phaseLabel[progress.phase]) : "Iniciando…"}
                 </span>
                 {progress?.phase === "sampling" && progress.steps > 1 && (
                   <span className="text-muted tabular-nums">
@@ -388,7 +561,7 @@ function Generator() {
           ) : (
             <>
               <Button variant="primary" className="w-full" icon={<Wand2 className="size-4" />} disabled={!prompt.trim() || !modelId} onClick={generate}>
-                Gerar imagem
+                {video ? (reference ? "Animar imagem" : "Gerar vídeo") : reference ? "Transformar imagem" : "Gerar imagem"}
               </Button>
               <p className="mt-1.5 text-center text-[11px] text-muted">
                 {estimate > 0 && `Estimativa: ~${duration(estimate)} neste computador · `}Ctrl+Enter
@@ -424,12 +597,34 @@ function Generator() {
               </div>
             )}
             {images.map((img) => (
-              <button key={img.id} onClick={() => setOpen(img)} className="group relative overflow-hidden rounded-xl border border-line bg-field">
-                <img src={imageURL(img.file)} loading="lazy" className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]" />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2.5 pt-6 pb-2 text-left text-[11.5px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  <div className="line-clamp-2">{img.prompt}</div>
-                </div>
-              </button>
+              <div key={img.id} className="group relative overflow-hidden rounded-xl border border-line bg-field">
+                <button onClick={() => setOpen(img)} className="block w-full">
+                  <Media img={img} className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]" />
+                  {img.kind === "video" && (
+                    <span className="absolute top-2 left-2 flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[10.5px] font-medium text-white">
+                      <Film className="size-3" /> {(img.frames / Math.max(img.fps, 1)).toFixed(1)} s
+                    </span>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2.5 pt-6 pb-2 text-left text-[11.5px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+                    <div className="line-clamp-2">{img.prompt}</div>
+                  </div>
+                </button>
+                <button
+                  title="Excluir imagem"
+                  onClick={async () => {
+                    if (!confirm("Excluir esta imagem?")) return;
+                    try {
+                      await api.deleteImage(img.id);
+                      loadImages();
+                    } catch (e) {
+                      app.toast(errorText(e), "error");
+                    }
+                  }}
+                  className="absolute top-2 right-2 rounded-md bg-black/55 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-bad"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -443,6 +638,14 @@ function Generator() {
             loadImages();
           }}
           onReuse={reuse}
+          onReference={async (img) => {
+            try {
+              setReference(await api.imageToAttachment(img.id));
+              setOpen(null);
+            } catch (e) {
+              app.toast(errorText(e), "error");
+            }
+          }}
         />
       )}
     </div>
@@ -451,14 +654,34 @@ function Generator() {
 
 export function ImagesPage() {
   const app = useApp();
+  const [mode, setMode] = useState<"image" | "video">("image");
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col bg-bg">
-      <header className="drag flex h-[52px] shrink-0 items-center border-b border-line px-6">
-        <h1 className="text-[14px] font-semibold">Imagens</h1>
+      <header className="drag flex h-[52px] shrink-0 items-center gap-4 border-b border-line px-6">
+        <h1 className="text-[14px] font-semibold">Imagens e vídeos</h1>
+        <div className="no-drag">
+          <Segmented
+            value={mode}
+            onChange={(v) => setMode(v as "image" | "video")}
+            options={[
+              { value: "image", label: "Imagem" },
+              { value: "video", label: "Vídeo" },
+            ]}
+          />
+        </div>
       </header>
-      <ToolGate tool="diffusionfile" icon={<ImagePlus className="size-6" />}>
-        <ModelGate category="image" models={app.imageModels} icon={<ImagePlus className="size-6" />}>
-          <Generator />
+      <ToolGate
+        tool="diffusionfile"
+        alternative={{ tool: "sd-cpp", label: "Baixar versão com GPU" }}
+        icon={<ImagePlus className="size-6" />}
+      >
+        <ModelGate
+          key={mode}
+          category={mode}
+          models={mode === "video" ? app.videoModels : app.imageModels}
+          icon={mode === "video" ? <Film className="size-6" /> : <ImagePlus className="size-6" />}
+        >
+          <Generator key={mode} video={mode === "video"} />
         </ModelGate>
       </ToolGate>
     </div>

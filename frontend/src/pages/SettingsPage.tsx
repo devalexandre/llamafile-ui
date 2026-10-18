@@ -1,11 +1,12 @@
-import { AlertTriangle, CheckCircle2, Cpu, Download, FileSearch, FolderOpen, Play, RotateCcw, Square, Terminal, Zap } from "lucide-react";
+import clsx from "clsx";
+import { AlertTriangle, CheckCircle2, Cpu, Download, FileSearch, FolderOpen, Play, RotateCcw, Square, Terminal, Volume2, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DownloadProgress } from "../components/ModelCard";
 import { Button, Card, Field, Row, Section, Segmented, Select, StatusDot, Switch } from "../components/ui";
 import { api, on } from "../lib/api";
 import { bytes } from "../lib/format";
 import { errorText, useApp } from "../lib/store";
-import type { Release, Settings } from "../lib/types";
+import type { BenchRecord, Release, Settings } from "../lib/types";
 
 /** Shown when llamafile is missing: download (GPU or CPU build) or pick a binary. */
 function LlamafileSetup() {
@@ -162,17 +163,250 @@ function ServerControl() {
   );
 }
 
+/** Compares dotted versions ("0.10.7" > "0.10.6"). */
+function newer(a: string, b: string): boolean {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  if (pa.some(isNaN) || pb.some(isNaN)) return false;
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d) return d > 0;
+  }
+  return false;
+}
+
+/** Speeds measured on this machine, used to calibrate the recommendations. */
+function BenchSection() {
+  const app = useApp();
+  const [records, setRecords] = useState<BenchRecord[]>([]);
+  const load = () =>
+    api
+      .benchmarks()
+      .then((r) => setRecords(r ?? []))
+      .catch(() => {});
+  useEffect(() => {
+    load();
+    return on("bench:updated", load);
+  }, []);
+  const name = (id: string) => app.installed.find((m) => m.id === id)?.name ?? id;
+  const value = (r: BenchRecord) =>
+    r.kind === "llm" ? `${r.value.toFixed(1)} tok/s` : r.kind === "image" ? `${r.value.toFixed(1)} s/imagem` : `${r.value.toFixed(2)}× a duração`;
+  return (
+    <Section
+      title="Medições de velocidade"
+      footer="Vêm das suas conversas, imagens e transcrições (ou do botão Medir na Biblioteca) e ajustam as estimativas de todos os modelos."
+    >
+      {records.length === 0 ? (
+        <Row label="Nenhuma medição ainda" hint="Use um modelo ou clique em Medir na Biblioteca para calibrar as recomendações." />
+      ) : (
+        records.map((r) => (
+          <Row
+            key={`${r.modelId}|${r.quant}|${r.mode}`}
+            label={
+              <span>
+                {name(r.modelId)}{" "}
+                <span className="text-[11.5px] text-muted">
+                  {r.quant} · {r.mode}
+                </span>
+              </span>
+            }
+            hint={`${r.samples} ${r.samples === 1 ? "amostra" : "amostras"} · ${Math.round(r.ratio * 100)}% da estimativa${
+              r.promptTps > 0 ? ` · leitura do prompt ${Math.round(r.promptTps)} tok/s` : ""
+            }`}
+          >
+            <span className="text-[12.5px] font-semibold">{value(r)}</span>
+          </Row>
+        ))
+      )}
+      {records.length > 0 && (
+        <Row label="Recomeçar calibração" hint="Apaga as medições e volta às estimativas pelo hardware.">
+          <Button size="sm" variant="plain" icon={<RotateCcw className="size-3.5" />} onClick={() => api.resetBenchmarks().then(load)}>
+            Apagar
+          </Button>
+        </Row>
+      )}
+    </Section>
+  );
+}
+
 const toolLabels: Record<string, { name: string; hint: string }> = {
   whisperfile: { name: "whisperfile", hint: "Transcrição de voz e ditado (whisper.cpp)." },
+  "whisper-gpu": {
+    name: "whisper.cpp",
+    hint: "Transcrição com GPU (Vulkan, ou Metal no Mac), compilada pelo projeto. Mesmos modelos, dezenas de vezes mais rápida.",
+  },
   diffusionfile: { name: "diffusionfile", hint: "Geração de imagens (stable-diffusion.cpp)." },
+  "sd-cpp": {
+    name: "stable-diffusion.cpp",
+    hint: "Motor de imagens com GPU (Vulkan, ou Metal no Mac), do projeto original do diffusionfile. Mesmos modelos, bem mais rápido.",
+  },
+  piper: { name: "Piper", hint: "Leitura das respostas em voz alta (projeto Piper, roda na CPU)." },
 };
+
+/** Piper voice, speed and auto-read for chat answers. */
+function SpeechSection() {
+  const app = useApp();
+  const s = app.settings!;
+  const piper = app.tools.find((t) => t.tool === "piper");
+  const voices = app.ttsModels;
+  const voice = voices.find((v) => v.id === s.ttsVoiceId) ?? voices[0];
+  const ready = !!piper?.installed && voices.length > 0;
+  return (
+    <Section
+      title="Leitura em voz alta"
+      footer={
+        !piper?.installed
+          ? "Instale o Piper em Ferramentas para ouvir as respostas."
+          : voices.length === 0
+            ? "Baixe uma voz em Descobrir → Leitura em voz alta."
+            : "Clique no ícone de alto-falante em uma resposta para ouvi-la."
+      }
+    >
+      <Row label="Voz" hint={voice ? voice.description : "Nenhuma voz instalada."}>
+        {voices.length > 0 ? (
+          <>
+            <Select
+              value={voice?.id ?? ""}
+              onChange={(v) => app.saveSettings({ ttsVoiceId: v })}
+              options={voices.map((v) => ({ value: v.id, label: v.name }))}
+            />
+            <Button
+              size="sm"
+              variant="plain"
+              icon={<Volume2 className="size-3.5" />}
+              disabled={!ready}
+              onClick={() => voice && api.previewVoice(voice.id).catch((e) => app.toast(errorText(e), "error"))}
+            >
+              Testar
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" onClick={() => app.setPage("discover")}>
+            Ver vozes
+          </Button>
+        )}
+      </Row>
+      <Row label="Velocidade" hint="Ritmo da fala.">
+        <input
+          type="range"
+          min={0.5}
+          max={2}
+          step={0.1}
+          defaultValue={s.ttsSpeed}
+          onMouseUp={(e) => app.saveSettings({ ttsSpeed: Number((e.target as HTMLInputElement).value) })}
+          className="w-[140px] accent-[var(--accent)]"
+        />
+        <span className="w-9 text-right text-[12px] text-muted tabular-nums">{s.ttsSpeed.toFixed(1)}×</span>
+      </Row>
+      <Row label="Ler respostas automaticamente" hint="Cada nova resposta do chat é lida assim que termina.">
+        <Switch checked={s.autoSpeak} disabled={!ready} onChange={(v) => app.saveSettings({ autoSpeak: v })} />
+      </Row>
+    </Section>
+  );
+}
+
+/** Which program transcribes audio, and greedy vs. beam search decoding. */
+function VoiceEngineRow() {
+  const app = useApp();
+  const s = app.settings!;
+  const wf = app.tool("whisperfile");
+  const gpu = app.tool("whisper-gpu");
+  const [active, setActive] = useState("");
+  useEffect(() => {
+    api
+      .activeVoiceEngine()
+      .then(setActive)
+      .catch(() => {});
+  }, [s.voiceEngine, wf?.installed, gpu?.installed]);
+  if (!wf?.installed && !gpu?.installed) return null;
+  const names: Record<string, string> = { whisperfile: "whisperfile", "whisper-gpu": "whisper.cpp (GPU)" };
+  return (
+    <>
+      <Row
+        label="Motor de transcrição"
+        hint={
+          <>
+            Em uso: <span className="font-medium text-fg">{names[active] ?? "nenhum"}</span>
+            {s.voiceEngine === "auto" && " · Automático usa a versão com GPU quando estiver instalada."}
+          </>
+        }
+      >
+        <Select
+          value={s.voiceEngine}
+          onChange={(v) => app.saveSettings({ voiceEngine: v as Settings["voiceEngine"] })}
+          options={[
+            { value: "auto", label: "Automático" },
+            { value: "whisperfile", label: "whisperfile (CPU)" },
+            { value: "whisper-gpu", label: "whisper.cpp (GPU)" },
+          ]}
+        />
+      </Row>
+      <Row label="Precisão máxima na transcrição" hint="Busca em feixe (beam search): ~3× mais lenta, ganho pequeno em áudios difíceis.">
+        <Switch checked={s.voiceAccurate} onChange={(v) => app.saveSettings({ voiceAccurate: v })} />
+      </Row>
+    </>
+  );
+}
+
+/** Which program generates images when both are installed. */
+function ImageEngineRow() {
+  const app = useApp();
+  const s = app.settings!;
+  const df = app.tool("diffusionfile");
+  const sd = app.tool("sd-cpp");
+  const [active, setActive] = useState("");
+  useEffect(() => {
+    api
+      .activeImageEngine()
+      .then(setActive)
+      .catch(() => {});
+  }, [s.imageEngine, df?.installed, sd?.installed]);
+  if (!df?.installed && !sd?.installed) return null;
+  const names: Record<string, string> = { diffusionfile: "diffusionfile", "sd-cpp": "stable-diffusion.cpp" };
+  return (
+    <Row
+      label="Motor de imagens"
+      hint={
+        <>
+          Em uso: <span className="font-medium text-fg">{names[active] ?? "nenhum"}</span>
+          {s.imageEngine === "auto" && " · Automático usa a versão com GPU quando estiver instalada."}
+        </>
+      }
+    >
+      <Select
+        value={s.imageEngine}
+        onChange={(v) => app.saveSettings({ imageEngine: v as Settings["imageEngine"] })}
+        options={[
+          { value: "auto", label: "Automático" },
+          { value: "diffusionfile", label: "diffusionfile (CPU)" },
+          { value: "sd-cpp", label: "stable-diffusion.cpp (GPU)" },
+        ]}
+      />
+    </Row>
+  );
+}
 
 /** Other executables from the llamafile release + the embeddings server. */
 function ToolsSection() {
   const app = useApp();
   const emb = app.embedder;
+  const [release, setRelease] = useState<Release | null>(null);
+  const [probing, setProbing] = useState(false);
+  useEffect(() => {
+    api
+      .latestRelease()
+      .then(setRelease)
+      .catch(() => {});
+  }, []);
+  const probe = () => {
+    setProbing(true);
+    api
+      .detectToolGPU()
+      .catch((e) => app.toast(errorText(e), "error"))
+      .finally(() => setProbing(false));
+  };
   return (
-    <Section title="Ferramentas" footer="Todas vêm da mesma release oficial do llamafile e rodam localmente.">
+    <Section title="Ferramentas" footer="whisperfile e diffusionfile vêm da release do llamafile; whisper.cpp com GPU é compilado pelo projeto; stable-diffusion.cpp e Piper vêm dos projetos originais. Tudo roda localmente.">
       {app.tools
         .filter((t) => t.tool !== "llamafile")
         .map((t) => {
@@ -181,13 +415,33 @@ function ToolsSection() {
             <Row
               key={t.tool}
               label={
-                <span className="flex items-center gap-2">
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <StatusDot state={t.installed ? "running" : "stopped"} />
-                  {toolLabels[t.tool].name}
-                  {t.installed && <span className="text-[11.5px] text-muted">v{t.version}</span>}
+                  <span className="whitespace-nowrap">{toolLabels[t.tool].name}</span>
+                  {t.installed && (
+                    <span className="text-[11.5px] whitespace-nowrap text-muted">
+                      {/^\d/.test(t.version) ? `v${t.version}` : t.version}
+                    </span>
+                  )}
+                  {t.installed && t.probed && (
+                    <span
+                      title={`Backends: ${t.backends.join(", ")}`}
+                      className={clsx("rounded px-1.5 py-px text-[10.5px] font-semibold whitespace-nowrap", t.gpu ? "bg-ok/15 text-ok" : "bg-hover text-muted")}
+                    >
+                      {t.gpu ? `GPU · ${t.backends.filter((b) => b.toUpperCase() !== "CPU").join(", ")}` : "só CPU"}
+                    </span>
+                  )}
+                  {t.installed && (t.tool === "whisperfile" || t.tool === "diffusionfile") && release && newer(release.version, t.version) && (
+                    <span className="rounded bg-accent/15 px-1.5 py-px text-[10.5px] font-semibold text-accent">v{release.version} disponível</span>
+                  )}
                 </span>
               }
-              hint={toolLabels[t.tool].hint}
+              hint={
+                <>
+                  {toolLabels[t.tool].hint}
+                  {t.installed && t.probed && !t.gpu && " Esta versão roda só na CPU; quando uma release trouxer GPU, atualize para acelerar."}
+                </>
+              }
             >
               {d ? (
                 <div className="w-[220px]">
@@ -200,12 +454,28 @@ function ToolsSection() {
                   icon={<Download className="size-3.5" />}
                   onClick={() => api.downloadTool(t.tool).catch((e) => app.toast(errorText(e), "error"))}
                 >
-                  {t.installed ? "Atualizar" : "Baixar"}
+                  {t.installed ? "Atualizar" : t.tool === "sd-cpp" || t.tool === "whisper-gpu" ? "Baixar (GPU)" : "Baixar"}
+                </Button>
+              )}
+              {t.installed && !d && (t.tool === "sd-cpp" || t.tool === "whisper-gpu") && (
+                <Button
+                  size="sm"
+                  variant="plain"
+                  onClick={() => confirm(`Remover o ${toolLabels[t.tool].name}?`) && api.removeTool(t.tool).catch((e) => app.toast(errorText(e), "error"))}
+                >
+                  Remover
+                </Button>
+              )}
+              {t.installed && !d && t.tool !== "piper" && (
+                <Button size="sm" variant="plain" icon={<Cpu className="size-3.5" />} loading={probing} onClick={probe} title="Detectar de novo se a ferramenta usa a GPU">
+                  Detectar GPU
                 </Button>
               )}
             </Row>
           );
         })}
+      <VoiceEngineRow />
+      <ImageEngineRow />
       {emb && emb.state !== "missing" && (
         <Row
           label={
@@ -289,6 +559,7 @@ export function SettingsPage() {
         <div className="mx-auto max-w-[680px] px-6 py-6">
           {missing ? <LlamafileSetup /> : <ServerControl />}
           <ToolsSection />
+          <BenchSection />
 
           <Section
             title="Rede"
@@ -398,6 +669,8 @@ export function SettingsPage() {
               <Switch checked={s.autoTitle} onChange={(v) => save({ autoTitle: v })} />
             </Row>
           </Section>
+
+          <SpeechSection />
 
           <Section title="Aparência">
             <Row label="Tema" hint="Nocturne — tema próprio inspirado no Dracula e no One Dark.">
