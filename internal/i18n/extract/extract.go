@@ -138,7 +138,7 @@ func catalogKeys(path string, set map[string]bool) error {
 	return nil
 }
 
-var placeholderRe = regexp.MustCompile(`%[-+# 0]*\d*(?:\.\d+)?[sdvfqwxXtg%]|\{[a-zA-Z_][a-zA-Z0-9_]*\}`)
+var placeholderRe = regexp.MustCompile(`%[-+#0]*\d*(?:\.\d+)?[sdvfqwxXtg%]|\{[a-zA-Z_][a-zA-Z0-9_]*\}`)
 
 // Placeholders lists the fmt verbs and {name} placeholders of a message, sorted.
 func Placeholders(s string) []string {

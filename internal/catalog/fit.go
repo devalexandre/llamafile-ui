@@ -201,6 +201,9 @@ func EvaluateWith(m *Model, f File, category string, hw hardware.Info, contextSi
 	fit.DownloadBytes = f.Size + m.extrasSize()
 	fit.Label = LevelLabel(fit.Level)
 	fit.QualityScore = quality(m, category, f.Quant)
+	if m.TTS != nil && SameLanguage(m.TTS.Language, i18n.Current()) {
+		fit.QualityScore = min(100, fit.QualityScore+20) // voices in the UI language first
+	}
 	if kind := KindOf(m, category); cal != nil && kind != "embedding" {
 		if c, ok := cal(m.ID, f.Quant, kind, fit.Mode); ok && c.Ratio > 0 {
 			switch kind {
@@ -528,4 +531,13 @@ func EstimateVideoSeconds(m *Model, f File, hw hardware.Info, width, height, fra
 	}
 	load := float64(f.Size+m.extrasSize()) / hardware.GiB / 1.5
 	return float64(steps)*perStep + decode + encode + load
+}
+
+// SameLanguage reports whether a voice language ("pt-BR", "zh-CN") matches a
+// UI language code ("pt-BR", "zh").
+func SameLanguage(voice, ui string) bool {
+	base := func(s string) string {
+		return strings.ToLower(strings.SplitN(strings.ReplaceAll(s, "_", "-"), "-", 2)[0])
+	}
+	return voice != "" && base(voice) == base(ui)
 }

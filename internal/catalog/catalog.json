@@ -52,7 +52,7 @@
     "leve",
     "multilíngue"
    ],
-   "description": "Modelo compacto do Google, rápido e com bom português para o tamanho.",
+   "description": "Modelo compacto do Google, rápido e bom em vários idiomas para o tamanho.",
    "files": [
     {
      "quant": "Q4_K_M",
@@ -319,7 +319,7 @@
     "visão",
     "multilíngue"
    ],
-   "description": "Conversa muito bem em português e entende imagens.",
+   "description": "Conversa muito bem em vários idiomas, incluindo português, e entende imagens.",
    "files": [
     {
      "quant": "Q4_K_M",
@@ -817,7 +817,7 @@
    "tags": [
     "transcrição"
    ],
-   "description": "Bom ponto de partida para ditado em português.",
+   "description": "Bom ponto de partida para ditado em vários idiomas.",
    "files": [
     {
      "quant": "Q5_1",
@@ -1300,7 +1300,7 @@
     "multilíngue",
     "RAG"
    ],
-   "description": "Embeddings multilíngues de alta qualidade — ótimo para documentos em português.",
+   "description": "Embeddings multilíngues de alta qualidade — ótimos para documentos em vários idiomas.",
    "files": [
     {
      "quant": "Q8_0",

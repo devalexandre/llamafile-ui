@@ -71,9 +71,9 @@ export default function App() {
 
   return (
     <div className="flex h-full">
-      <Sidebar key={app.settings?.language ?? ""} />
+      <Sidebar key={`sidebar-${app.settings?.language ?? ""}`} />
       {/* Remount the pages when the language changes so every text is re-translated. */}
-      <main key={app.settings?.language ?? ""} className="flex min-w-0 flex-1 flex-col">
+      <main key={`main-${app.settings?.language ?? ""}`} className="flex min-w-0 flex-1 flex-col">
         <MissingRuntimeBanner />
         <div className={clsx("flex min-h-0 flex-1")}>
           {app.page === "chat" && <ChatPage />}

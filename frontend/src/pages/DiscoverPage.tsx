@@ -34,7 +34,7 @@ const categoryNotes: Record<string, string> = {
   image: msg("Modelos de imagem rodam com o diffusionfile, na CPU (ou Metal no Mac). Os tempos abaixo são estimados para este computador."),
   voice: msg("Modelos de voz rodam com o whisperfile, na CPU. “Tempo real” significa que 1 minuto de áudio leva ~1 minuto para transcrever."),
   tts: msg("Vozes do Piper: leves (~60 MB), rodam na CPU bem mais rápido que o tempo real. Precisam do Piper, instalado em Configurações → Ferramentas."),
-  embedding: msg("Usados na página Documentos. Modelos multilíngues funcionam melhor com textos em português."),
+  embedding: msg("Usados na página Documentos. Modelos multilíngues funcionam melhor com textos em idiomas diferentes do inglês."),
 };
 
 /** The thin llamafile build has no GPU support: recommendations assume CPU. */
@@ -199,14 +199,12 @@ export function DiscoverPage() {
                       })}
                     </li>
                     <li>
-                      {t(
-                        best.fit.measured
-                          ? "Velocidade medida aqui: {speed} ({label})."
-                          : best.fit.calibrated
-                            ? "Velocidade estimada, calibrada pelas suas medições: {speed} ({label})."
-                            : "Velocidade estimada: {speed} ({label}).",
-                        { speed: speedText(best), label: best.fit.speedLabel.toLowerCase() },
-                      )}
+                      {(() => {
+                        const vars = { speed: speedText(best), label: best.fit.speedLabel.toLowerCase() };
+                        if (best.fit.measured) return t("Velocidade medida aqui: {speed} ({label}).", vars);
+                        if (best.fit.calibrated) return t("Velocidade estimada, calibrada pelas suas medições: {speed} ({label}).", vars);
+                        return t("Velocidade estimada: {speed} ({label}).", vars);
+                      })()}
                     </li>
                     <li>
                       {t("Qualidade {score}/100 para {category} na quantização {quant}.", {

@@ -28,7 +28,7 @@ const toolInfo: Record<ToolStatus["tool"], { title: string; text: string }> = {
   },
   piper: {
     title: msg("Instale o Piper"),
-    text: msg("Motor de leitura em voz alta (texto para fala) que roda na CPU, com vozes naturais em português."),
+    text: msg("Motor de leitura em voz alta (texto para fala) que roda na CPU, com vozes naturais em vários idiomas."),
   },
 };
 

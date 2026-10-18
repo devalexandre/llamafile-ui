@@ -46,6 +46,14 @@ func (a *App) ttsVoice(id string) (catalog.View, error) {
 	if len(list) == 0 {
 		return catalog.View{}, errors.New(i18n.T("baixe uma voz em Descobrir → Leitura em voz alta"))
 	}
+	if id == "" {
+		// No voice chosen: prefer one in the UI language.
+		for _, v := range list {
+			if v.TTS != nil && catalog.SameLanguage(v.TTS.Language, i18n.Current()) {
+				return v, nil
+			}
+		}
+	}
 	return list[0], nil
 }
 
@@ -74,6 +82,13 @@ var voiceSamples = map[string]string{
 	"pt": "Olá! Esta é a voz que vai ler as respostas do chat para você.",
 	"en": "Hello! This is the voice that will read the chat answers to you.",
 	"es": "¡Hola! Esta es la voz que leerá las respuestas del chat para ti.",
+	"fr": "Bonjour ! Voici la voix qui vous lira les réponses du chat.",
+	"de": "Hallo! Das ist die Stimme, die dir die Antworten im Chat vorliest.",
+	"ru": "Здравствуйте! Этим голосом я буду читать вам ответы в чате.",
+	"zh": "你好！我会用这个声音为你朗读聊天回复。",
+	"hi": "नमस्ते! इसी आवाज़ में मैं आपको चैट के जवाब पढ़कर सुनाऊँगी।",
+	"ar": "مرحبًا! بهذا الصوت سأقرأ لك ردود المحادثة.",
+	"id": "Halo! Dengan suara ini saya akan membacakan jawaban obrolan untuk Anda.",
 }
 
 // PreviewVoice plays a short sample with an installed voice.

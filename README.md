@@ -20,6 +20,14 @@
   <img src="docs/screenshots/chat.png" width="860" alt="Chat com documentos e fontes citadas" />
 </p>
 
+## Idiomas
+
+A interface está em **12 idiomas** — English, 中文, हिन्दी, Español, العربية (da direita para a
+esquerda), Français, বাংলা, Português, Русский, Bahasa Indonesia, 日本語 e Deutsch. Na primeira
+abertura o app usa o idioma do sistema; dá para trocar em *Configurações → Aparência*. Mensagens do
+servidor, menu da bandeja, descrições dos modelos e agentes prontos também são traduzidos, e há vozes
+do Piper para 10 desses idiomas (bengali e japonês ainda não têm voz compatível).
+
 ## Por que usar
 
 - **Privado de verdade:** conversas, documentos, áudios e imagens nunca saem do seu computador.
@@ -339,6 +347,13 @@ go test ./...
 go test -tags integration ./internal/chat ./internal/rag ./internal/imagegen -v
 VOICE_SAMPLE=fala.wav go test -tags integration ./internal/voice -v
 ```
+
+### Traduções
+
+Os textos são escritos em português e usados como chave: `t("Salvar")` no frontend e
+`i18n.T("Salvar")` no Go. As traduções ficam em `internal/i18n/locales/<idioma>.json` (as mesmas para
+a interface e o backend). `go run ./tools/i18n` mostra o que falta em cada idioma e o teste
+`TestLocalesComplete` falha se algum texto ficar sem tradução ou com marcadores (`%s`, `{nome}`) diferentes.
 
 ### Atualizar o catálogo de modelos
 
