@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/devalexandre/llamafile-ui/internal/downloads"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/tools"
 )
@@ -83,7 +84,7 @@ func (a *App) RemoveTool(name string) error {
 	case tools.WhisperGPU:
 		err = tools.RemoveWhisperGPU()
 	default:
-		return errors.New("esta ferramenta não pode ser removida por aqui")
+		return errors.New(i18n.T("esta ferramenta não pode ser removida por aqui"))
 	}
 	if err != nil {
 		return err

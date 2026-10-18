@@ -9,11 +9,26 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/google/uuid"
 	_ "modernc.org/sqlite"
 )
 
-const DefaultTitle = "Nova conversa"
+var DefaultTitle = i18n.N("Nova conversa")
+
+// isDefaultTitle reports whether title is DefaultTitle in any language
+// (conversations are created with the title in the language of the moment).
+func isDefaultTitle(title string) bool {
+	if title == DefaultTitle {
+		return true
+	}
+	for _, l := range i18n.Languages {
+		if title == i18n.TIn(l.Code, DefaultTitle) {
+			return true
+		}
+	}
+	return false
+}
 
 type Conversation struct {
 	ID           string `json:"id"`
@@ -227,7 +242,7 @@ func (s *Store) CreateWith(c Conversation) (Conversation, error) {
 		c.CollectionID = a.CollectionID
 	}
 	t := now()
-	c.ID, c.Title, c.CreatedAt, c.UpdatedAt = uuid.NewString(), DefaultTitle, t, t
+	c.ID, c.Title, c.CreatedAt, c.UpdatedAt = uuid.NewString(), i18n.T(DefaultTitle), t, t
 	_, err := s.db.Exec(`INSERT INTO conversations (id, title, model_id, system_prompt, pinned, collection_id, agent_id, project_id, created_at, updated_at)
 VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`, c.ID, c.Title, c.ModelID, c.SystemPrompt, c.CollectionID, c.AgentID, c.ProjectID, c.CreatedAt, c.UpdatedAt)
 	return c, err
@@ -277,7 +292,7 @@ func (s *Store) DeleteFrom(conversationID string, messageID int64) error {
 func (s *Store) Rename(id, title string) error {
 	title = strings.TrimSpace(title)
 	if title == "" {
-		title = DefaultTitle
+		title = i18n.T(DefaultTitle)
 	}
 	_, err := s.db.Exec(`UPDATE conversations SET title = ? WHERE id = ?`, title, id)
 	return err
@@ -333,15 +348,15 @@ func (s *Store) Export(id, format string) (string, error) {
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "# %s\n\n", c.Title)
-	fmt.Fprintf(&b, "_Modelo: %s · %s_\n\n", c.ModelID, time.UnixMilli(c.CreatedAt).Format("02/01/2006 15:04"))
+	b.WriteString(i18n.Tf("_Modelo: %s · %s_", c.ModelID, time.UnixMilli(c.CreatedAt).Format("02/01/2006 15:04")) + "\n\n")
 	for _, m := range msgs {
-		who := "Você"
+		who := i18n.T("Você")
 		if m.Role == "assistant" {
-			who = "Assistente"
+			who = i18n.T("Assistente")
 		}
 		fmt.Fprintf(&b, "---\n\n**%s**\n\n%s\n\n", who, m.Content)
 		for _, src := range m.Sources {
-			fmt.Fprintf(&b, "> [%d] %s (trecho %d)\n", src.N, src.Document, src.Chunk+1)
+			b.WriteString(i18n.Tf("> [%d] %s (trecho %d)", src.N, src.Document, src.Chunk+1) + "\n")
 		}
 	}
 	return b.String(), nil

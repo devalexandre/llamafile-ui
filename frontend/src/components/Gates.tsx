@@ -6,28 +6,29 @@ import { errorText, useApp } from "../lib/store";
 import type { ModelView, Release, ToolStatus } from "../lib/types";
 import { DownloadProgress } from "./ModelCard";
 import { Button, Card, Select } from "./ui";
+import { msg, t } from "../i18n";
 
 const toolInfo: Record<ToolStatus["tool"], { title: string; text: string }> = {
-  llamafile: { title: "Instale o llamafile", text: "Motor que roda os modelos de linguagem." },
+  llamafile: { title: msg("Instale o llamafile"), text: msg("Motor que roda os modelos de linguagem.") },
   whisperfile: {
-    title: "Instale o whisperfile",
-    text: "Motor de transcrição de voz do projeto llamafile (whisper.cpp). É um único executável pequeno.",
+    title: msg("Instale o whisperfile"),
+    text: msg("Motor de transcrição de voz do projeto llamafile (whisper.cpp). É um único executável pequeno."),
   },
   diffusionfile: {
-    title: "Instale o diffusionfile",
-    text: "Motor de geração de imagens do projeto llamafile (stable-diffusion.cpp). É um único executável.",
+    title: msg("Instale o diffusionfile"),
+    text: msg("Motor de geração de imagens do projeto llamafile (stable-diffusion.cpp). É um único executável."),
   },
   "whisper-gpu": {
-    title: "Instale o whisper.cpp com GPU",
-    text: "Versão do motor de transcrição que usa a placa de vídeo (Vulkan, ou Metal no Mac): dezenas de vezes mais rápida.",
+    title: msg("Instale o whisper.cpp com GPU"),
+    text: msg("Versão do motor de transcrição que usa a placa de vídeo (Vulkan, ou Metal no Mac): dezenas de vezes mais rápida."),
   },
   "sd-cpp": {
-    title: "Instale o stable-diffusion.cpp",
-    text: "Versão do motor de imagens com GPU (Vulkan, ou Metal no Mac): gera imagens bem mais rápido.",
+    title: msg("Instale o stable-diffusion.cpp"),
+    text: msg("Versão do motor de imagens com GPU (Vulkan, ou Metal no Mac): gera imagens bem mais rápido."),
   },
   piper: {
-    title: "Instale o Piper",
-    text: "Motor de leitura em voz alta (texto para fala) que roda na CPU, com vozes naturais em português.",
+    title: msg("Instale o Piper"),
+    text: msg("Motor de leitura em voz alta (texto para fala) que roda na CPU, com vozes naturais em vários idiomas."),
   },
 };
 
@@ -65,9 +66,12 @@ export function ToolGate({
         <div className="flex gap-4">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">{icon}</div>
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold">{info.title}</div>
+            <div className="text-[15px] font-semibold">{t(info.title)}</div>
             <p className="mt-1 text-[12.5px] text-muted">
-              {info.text} Baixamos a versão {release?.version ?? "mais recente"} direto do GitHub oficial da Mozilla AI.
+              {t(info.text)}{" "}
+              {release?.version
+                ? t("Baixamos a versão {version} direto do GitHub oficial da Mozilla AI.", { version: release.version })
+                : t("Baixamos a versão mais recente direto do GitHub oficial da Mozilla AI.")}
             </p>
             <div className="mt-4">
               {download || altDownload ? (
@@ -89,8 +93,7 @@ export function ToolGate({
                     }
                   }}
                 >
-                  Baixar {tool}
-                  {size ? ` · ${bytes(size)}` : ""}
+                  {size ? t("Baixar {tool} · {size}", { tool, size: bytes(size) }) : t("Baixar {tool}", { tool })}
                 </Button>
                 {alternative && (
                   <Button
@@ -111,15 +114,15 @@ export function ToolGate({
 }
 
 const categoryText: Record<string, { title: string; text: string }> = {
-  voice: { title: "Nenhum modelo de voz instalado", text: "Baixe um modelo Whisper recomendado para o seu computador." },
-  image: { title: "Nenhum modelo de imagem instalado", text: "Baixe um modelo de imagem recomendado para o seu computador." },
+  voice: { title: msg("Nenhum modelo de voz instalado"), text: msg("Baixe um modelo Whisper recomendado para o seu computador.") },
+  image: { title: msg("Nenhum modelo de imagem instalado"), text: msg("Baixe um modelo de imagem recomendado para o seu computador.") },
   video: {
-    title: "Nenhum modelo de vídeo instalado",
-    text: "Baixe um modelo de vídeo. Eles são grandes (5–8 GB com o codificador de texto) e funcionam bem melhor com a versão com GPU do motor de imagens.",
+    title: msg("Nenhum modelo de vídeo instalado"),
+    text: msg("Baixe um modelo de vídeo. Eles são grandes (5–8 GB com o codificador de texto) e funcionam bem melhor com a versão com GPU do motor de imagens."),
   },
   embedding: {
-    title: "Nenhum modelo de embeddings instalado",
-    text: "Os documentos são indexados com um modelo de embeddings. Baixe um recomendado — são pequenos.",
+    title: msg("Nenhum modelo de embeddings instalado"),
+    text: msg("Os documentos são indexados com um modelo de embeddings. Baixe um recomendado — são pequenos."),
   },
 };
 
@@ -131,7 +134,7 @@ export function ModelGate({ category, models, icon, children }: { category: stri
     if (models.length === 0) api.topPicks().then((p) => setPick(p?.[category] ?? null));
   }, [models.length, category, app.catalogRevision]);
   if (models.length > 0) return <>{children}</>;
-  const t = categoryText[category];
+  const ct = categoryText[category];
   const download = pick ? app.downloads.find((d) => d.key === `model:${pick.id}`) : undefined;
   return (
     <div className="flex flex-1 items-start justify-center overflow-y-auto px-6 py-12">
@@ -139,15 +142,15 @@ export function ModelGate({ category, models, icon, children }: { category: stri
         <div className="flex gap-4">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">{icon}</div>
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold">{t.title}</div>
-            <p className="mt-1 text-[12.5px] text-muted">{t.text}</p>
+            <div className="text-[15px] font-semibold">{t(ct.title)}</div>
+            <p className="mt-1 text-[12.5px] text-muted">{t(ct.text)}</p>
             {pick && (
               <div className="mt-4 rounded-lg bg-field p-3">
                 <div className="flex items-center gap-1.5 text-[11.5px] font-semibold text-accent">
-                  <Sparkles className="size-3" /> Melhor escolha para você
+                  <Sparkles className="size-3" /> {t("Melhor escolha para você")}
                 </div>
                 <div className="mt-0.5 text-[13px] font-semibold">{pick.name}</div>
-                <div className="text-[12px] text-muted">{pick.description}</div>
+                <div className="text-[12px] text-muted">{t(pick.description)}</div>
                 <div className="mt-3">
                   {download ? (
                     <DownloadProgress d={download} onCancel={() => api.cancelDownload(download.key)} />
@@ -158,14 +161,14 @@ export function ModelGate({ category, models, icon, children }: { category: stri
                       icon={<Download className="size-3.5" />}
                       onClick={() => api.downloadModel(pick.id).catch((e) => app.toast(errorText(e), "error"))}
                     >
-                      Baixar · {bytes(pick.fit.downloadBytes)}
+                      {t("Baixar · {size}", { size: bytes(pick.fit.downloadBytes) })}
                     </Button>
                   )}
                 </div>
               </div>
             )}
             <Button className="mt-3" size="sm" variant="plain" onClick={() => app.openDiscover(category)}>
-              Ver todos os modelos
+              {t("Ver todos os modelos")}
             </Button>
           </div>
         </div>

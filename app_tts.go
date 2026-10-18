@@ -7,6 +7,7 @@ import (
 
 	"github.com/devalexandre/llamafile-ui/internal/catalog"
 	"github.com/devalexandre/llamafile-ui/internal/downloads"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
 	"github.com/devalexandre/llamafile-ui/internal/tools"
@@ -25,7 +26,7 @@ func (a *App) piperStatus() ToolStatus {
 func (a *App) downloadPiper() error {
 	asset, ok := tts.ReleaseAsset()
 	if !ok {
-		return errors.New("o Piper não tem versão pronta para este sistema")
+		return errors.New(i18n.T("o Piper não tem versão pronta para este sistema"))
 	}
 	key := tools.DownloadKey(piperTool)
 	dest := filepath.Join(paths.BinDir(), asset.Name)
@@ -43,7 +44,15 @@ func (a *App) ttsVoice(id string) (catalog.View, error) {
 	}
 	list := a.installedFor("tts", id)
 	if len(list) == 0 {
-		return catalog.View{}, errors.New("baixe uma voz em Descobrir → Leitura em voz alta")
+		return catalog.View{}, errors.New(i18n.T("baixe uma voz em Descobrir → Leitura em voz alta"))
+	}
+	if id == "" {
+		// No voice chosen: prefer one in the UI language.
+		for _, v := range list {
+			if v.TTS != nil && catalog.SameLanguage(v.TTS.Language, i18n.Current()) {
+				return v, nil
+			}
+		}
 	}
 	return list[0], nil
 }
@@ -51,7 +60,7 @@ func (a *App) ttsVoice(id string) (catalog.View, error) {
 func (a *App) speak(id, text, voiceID string) error {
 	bin := tts.Binary()
 	if bin == "" {
-		return errors.New("instale o Piper em Configurações → Ferramentas para ouvir as respostas")
+		return errors.New(i18n.T("instale o Piper em Configurações → Ferramentas para ouvir as respostas"))
 	}
 	v, err := a.ttsVoice(voiceID)
 	if err != nil {
@@ -73,6 +82,13 @@ var voiceSamples = map[string]string{
 	"pt": "Olá! Esta é a voz que vai ler as respostas do chat para você.",
 	"en": "Hello! This is the voice that will read the chat answers to you.",
 	"es": "¡Hola! Esta es la voz que leerá las respuestas del chat para ti.",
+	"fr": "Bonjour ! Voici la voix qui vous lira les réponses du chat.",
+	"de": "Hallo! Das ist die Stimme, die dir die Antworten im Chat vorliest.",
+	"ru": "Здравствуйте! Этим голосом я буду читать вам ответы в чате.",
+	"zh": "你好！我会用这个声音为你朗读聊天回复。",
+	"hi": "नमस्ते! इसी आवाज़ में मैं आपको चैट के जवाब पढ़कर सुनाऊँगी।",
+	"ar": "مرحبًا! بهذا الصوت سأقرأ لك ردود المحادثة.",
+	"id": "Halo! Dengan suara ini saya akan membacakan jawaban obrolan untuk Anda.",
 }
 
 // PreviewVoice plays a short sample with an installed voice.

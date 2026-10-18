@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/devalexandre/llamafile-ui/internal/archive"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 )
 
@@ -48,7 +49,7 @@ func sdcppSuffix() (string, bool) {
 func SDCppRelease(ctx context.Context) (version string, asset Asset, name string, err error) {
 	suffix, ok := sdcppSuffix()
 	if !ok {
-		return "", Asset{}, "", errors.New("não há build com GPU do stable-diffusion.cpp para este sistema")
+		return "", Asset{}, "", errors.New(i18n.T("não há build com GPU do stable-diffusion.cpp para este sistema"))
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -111,7 +112,7 @@ func installNative(file, dir, binName, version, label string) error {
 	_ = os.RemoveAll(tmp)
 	if err := archive.Extract(file, tmp); err != nil {
 		_ = os.RemoveAll(tmp)
-		return fmt.Errorf("não foi possível extrair o %s: %w", label, err)
+		return fmt.Errorf(i18n.T("não foi possível extrair o %s: %w"), label, err)
 	}
 	// The binary may sit in a subfolder depending on the package.
 	root := ""
@@ -124,7 +125,7 @@ func installNative(file, dir, binName, version, label string) error {
 	})
 	if root == "" {
 		_ = os.RemoveAll(tmp)
-		return fmt.Errorf("o pacote do %s não contém o %s", label, binName)
+		return errors.New(i18n.Tf("o pacote do %s não contém o %s", label, binName))
 	}
 	_ = os.WriteFile(filepath.Join(root, "VERSION"), []byte(version), 0o644)
 	_ = os.RemoveAll(dir)

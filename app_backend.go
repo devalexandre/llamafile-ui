@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/devalexandre/llamafile-ui/internal/catalog"
 	"github.com/devalexandre/llamafile-ui/internal/chat"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
@@ -27,7 +27,7 @@ type backend struct{ *App }
 
 func (a *backend) EnsureModel(ctx context.Context, id string) error {
 	if a.catalog.ModelPath(id) == "" {
-		return fmt.Errorf("o modelo não está instalado")
+		return errors.New(i18n.T("o modelo não está instalado"))
 	}
 	_ = a.updateSettings(func(s *settings.Settings) { s.LastModelID = id })
 	return a.runtime.EnsureModel(ctx, id)
@@ -36,8 +36,13 @@ func (a *backend) BaseURL() string               { return a.runtime.Status().Bas
 func (a *backend) SupportsVision(id string) bool { return a.catalog.MMProjPath(id) != "" }
 func (a *backend) ContextSize() int              { return a.settings.Get().ContextSize }
 func (a *backend) Temperature() float64          { return a.settings.Get().Temperature }
-func (a *backend) DefaultSystemPrompt() string   { return a.settings.Get().SystemPrompt }
-func (a *backend) AutoTitle() bool               { return a.settings.Get().AutoTitle }
+func (a *backend) DefaultSystemPrompt() string {
+	if p := a.settings.Get().SystemPrompt; p != "" {
+		return p
+	}
+	return settings.DefaultPrompt()
+}
+func (a *backend) AutoTitle() bool { return a.settings.Get().AutoTitle }
 func (a *backend) AttachmentPath(name string) string {
 	return filepath.Join(paths.AttachmentsDir(), filepath.Base(name))
 }
@@ -63,7 +68,7 @@ func (a *backend) Retrieve(ctx context.Context, collectionID, query string) ([]c
 // Embed runs texts through the embeddings server, starting it if needed.
 func (a *backend) Embed(ctx context.Context, modelID string, texts []string) ([][]float32, error) {
 	if a.catalog.ModelPath(modelID) == "" {
-		return nil, fmt.Errorf("o modelo de embeddings %q não está instalado", a.catalog.DisplayName(modelID))
+		return nil, errors.New(i18n.Tf("o modelo de embeddings %q não está instalado", a.catalog.DisplayName(modelID)))
 	}
 	if err := a.embedder.EnsureModel(ctx, modelID); err != nil {
 		return nil, err
@@ -81,7 +86,7 @@ func (a *backend) Embed(ctx context.Context, modelID string, texts []string) ([]
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("servidor de embeddings: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
+		return nil, errors.New(i18n.Tf("servidor de embeddings: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(data))))
 	}
 	var out struct {
 		Data []struct {
@@ -100,7 +105,7 @@ func (a *backend) Embed(ctx context.Context, modelID string, texts []string) ([]
 	}
 	for _, v := range vecs {
 		if len(v) == 0 {
-			return nil, errors.New("o servidor não retornou todos os embeddings")
+			return nil, errors.New(i18n.T("o servidor não retornou todos os embeddings"))
 		}
 	}
 	return vecs, nil
@@ -123,11 +128,11 @@ func (a *backend) Binary() string {
 func (a *backend) Model(id string) (imagegen.ModelSpec, error) {
 	m := a.catalog.Find(id)
 	if m == nil || m.Image == nil {
-		return imagegen.ModelSpec{}, errors.New("escolha um modelo de imagem")
+		return imagegen.ModelSpec{}, errors.New(i18n.T("escolha um modelo de imagem"))
 	}
 	main := a.catalog.ModelPath(id)
 	if main == "" {
-		return imagegen.ModelSpec{}, fmt.Errorf("%s não está instalado", m.Name)
+		return imagegen.ModelSpec{}, errors.New(i18n.Tf("%s não está instalado", m.Name))
 	}
 	return imagegen.ModelSpec{Name: m.Name, MainFlag: m.Image.MainFlag, MainPath: main,
 		Components: a.catalog.ComponentPaths(id), Args: m.Image.Args}, nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -36,7 +37,7 @@ func ProbeBackends(ctx context.Context, t Tool, bin, whisperModel string) ([]str
 	switch t {
 	case Whisper:
 		if whisperModel == "" {
-			return nil, errors.New("é preciso um modelo Whisper para detectar a GPU do whisperfile")
+			return nil, errors.New(i18n.T("é preciso um modelo Whisper para detectar a GPU do whisperfile"))
 		}
 		wav := filepath.Join(tmp, "probe.wav")
 		if err := writeSilence(wav, 16000); err != nil {
@@ -47,12 +48,12 @@ func ProbeBackends(ctx context.Context, t Tool, bin, whisperModel string) ([]str
 	case Diffusion:
 		args = []string{"-v", "-m", filepath.Join(tmp, "missing.gguf"), "-p", "probe", "-o", filepath.Join(tmp, "probe.png")}
 	default:
-		return nil, errors.New("ferramenta sem detecção de backend")
+		return nil, errors.New(i18n.T("ferramenta sem detecção de backend"))
 	}
 	out, _ := Command(ctx, bin, args...).CombinedOutput() // a non-zero exit is expected for diffusionfile
 	backends := parseBackends(t, string(out))
 	if len(backends) == 0 {
-		return nil, errors.New("não foi possível identificar os backends da ferramenta")
+		return nil, errors.New(i18n.T("não foi possível identificar os backends da ferramenta"))
 	}
 	return backends, nil
 }

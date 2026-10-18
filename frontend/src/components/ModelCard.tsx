@@ -6,6 +6,7 @@ import { bytes, duration, gb, params } from "../lib/format";
 import { errorText, useApp } from "../lib/store";
 import type { ModelView, Page } from "../lib/types";
 import { Button, FitBadge, Progress, Tag } from "./ui";
+import { t } from "../i18n";
 
 export function useModelActions(m: ModelView) {
   const app = useApp();
@@ -32,14 +33,14 @@ export function useModelActions(m: ModelView) {
     startDownload: (quant = "") => run(() => api.downloadModel(m.id, quant)),
     cancel: () => api.cancelDownload(key),
     remove: () => {
-      if (!confirm(`Remover ${m.name} do disco? (${bytes(m.installedBytes)})`)) return;
+      if (!confirm(t("Remover {name} do disco? ({size})", { name: m.name, size: bytes(m.installedBytes) }))) return;
       run(() => api.removeModel(m.id));
     },
     load: () => run(() => api.startModel(m.id)),
     measure: () =>
       run(async () => {
         const r = await api.benchmarkModel(m.id);
-        app.toast(`${m.name}: ${r.tps.toFixed(1)} tok/s medidos (estimativa era ~${Math.round(r.estimateTps)})`, "success");
+        app.toast(t("{name}: {tps} tok/s medidos (estimativa era ~{estimate})", { name: m.name, tps: r.tps.toFixed(1), estimate: Math.round(r.estimateTps) }), "success");
       }),
     chat: () => {
       app.saveSettings({ lastModelId: m.id });
@@ -53,11 +54,11 @@ export function DownloadProgress({ d, onCancel }: { d: { progress: number; recei
     <div className="w-full">
       <div className="mb-1 flex items-center justify-between text-[11.5px] text-muted">
         <span>
-          {bytes(d.received)} de {bytes(d.total)} · {bytes(d.speed)}/s
+          {t("{received} de {total} · {speed}/s", { received: bytes(d.received), total: bytes(d.total), speed: bytes(d.speed) })}
         </span>
         <span className="flex items-center gap-1.5">
           {duration(d.eta)}
-          <button onClick={onCancel} title="Cancelar" className="rounded-full p-0.5 hover:bg-hover hover:text-fg">
+          <button onClick={onCancel} title={t("Cancelar")} className="rounded-full p-0.5 hover:bg-hover hover:text-fg">
             <X className="size-3" />
           </button>
         </span>
@@ -69,11 +70,11 @@ export function DownloadProgress({ d, onCancel }: { d: { progress: number; recei
 
 /** Human estimate of how fast a model runs here, per model kind. */
 export function speedText(m: ModelView): string {
-  if (m.fit.secondsPerImage > 0) return `~${duration(m.fit.secondsPerImage)}/imagem`;
-  if (m.fit.realtimeFactor > 0 && m.runtime === "piper") return `${(1 / m.fit.realtimeFactor).toFixed(0)}× tempo real`;
+  if (m.fit.secondsPerImage > 0) return t("~{time}/imagem", { time: duration(m.fit.secondsPerImage) });
+  if (m.fit.realtimeFactor > 0 && m.runtime === "piper") return t("{factor}× tempo real", { factor: (1 / m.fit.realtimeFactor).toFixed(0) });
   if (m.fit.realtimeFactor > 0) {
     const f = m.fit.realtimeFactor;
-    return f < 1 ? `${(1 / f).toFixed(1)}× tempo real` : `${f.toFixed(1)}× a duração`;
+    return f < 1 ? t("{factor}× tempo real", { factor: (1 / f).toFixed(1) }) : t("{factor}× a duração", { factor: f.toFixed(1) });
   }
   if (m.fit.tps > 0) return `~${Math.round(m.fit.tps)} tok/s`;
   return m.fit.speedLabel;
@@ -82,10 +83,16 @@ export function speedText(m: ModelView): string {
 /** Whether the speed shown was measured here, calibrated or only estimated. */
 export function SpeedSource({ m }: { m: ModelView }) {
   const [text, title, cls] = m.fit.measured
-    ? ["medido", `Medido neste computador (${m.fit.samples} ${m.fit.samples === 1 ? "amostra" : "amostras"})`, "text-ok"]
+    ? [
+        t("medido"),
+        m.fit.samples === 1
+          ? t("Medido neste computador ({n} amostra)", { n: m.fit.samples })
+          : t("Medido neste computador ({n} amostras)", { n: m.fit.samples }),
+        "text-ok",
+      ]
     : m.fit.calibrated
-      ? ["calibrado", "Estimativa ajustada pelas medições de outros modelos neste computador", "text-accent"]
-      : ["estimado", "Estimativa pelo hardware — use o modelo ou clique em Medir para refinar", "text-muted"];
+      ? [t("calibrado"), t("Estimativa ajustada pelas medições de outros modelos neste computador"), "text-accent"]
+      : [t("estimado"), t("Estimativa pelo hardware — use o modelo ou clique em Medir para refinar"), "text-muted"];
   return (
     <span title={title} className={clsx("text-[10px] font-medium uppercase tracking-wide", cls)}>
       {text}
@@ -95,10 +102,10 @@ export function SpeedSource({ m }: { m: ModelView }) {
 
 /** Where a non-chat model is used in the app. */
 export function pageFor(m: ModelView): { page: Page; label: string; icon: React.ReactNode } | null {
-  if (m.runtime === "whisperfile") return { page: "voice", label: "Transcrever", icon: <AudioLines className="size-3.5" /> };
-  if (m.runtime === "diffusionfile") return { page: "images", label: "Gerar imagens", icon: <ImagePlus className="size-3.5" /> };
-  if (m.runtime === "piper") return { page: "settings", label: "Configurar leitura", icon: <Volume2 className="size-3.5" /> };
-  if (m.categories.includes("embedding")) return { page: "documents", label: "Usar em Documentos", icon: <BookOpen className="size-3.5" /> };
+  if (m.runtime === "whisperfile") return { page: "voice", label: t("Transcrever"), icon: <AudioLines className="size-3.5" /> };
+  if (m.runtime === "diffusionfile") return { page: "images", label: t("Gerar imagens"), icon: <ImagePlus className="size-3.5" /> };
+  if (m.runtime === "piper") return { page: "settings", label: t("Configurar leitura"), icon: <Volume2 className="size-3.5" /> };
+  if (m.categories.includes("embedding")) return { page: "documents", label: t("Usar em Documentos"), icon: <BookOpen className="size-3.5" /> };
   return null;
 }
 
@@ -120,22 +127,22 @@ export function ModelCard({ m, highlight }: { m: ModelView; highlight?: boolean 
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <h3 className="truncate text-[14px] font-semibold">{m.name}</h3>
-            {m.vision && <ImageIcon className="size-3.5 shrink-0 text-muted" aria-label="Entende imagens" />}
+            {m.vision && <ImageIcon className="size-3.5 shrink-0 text-muted" aria-label={t("Entende imagens")} />}
           </div>
           <div className="text-[12px] text-muted">
             {m.publisher} · {params(m.params_b)}
-            {m.active_params_b < m.params_b && ` (${params(m.active_params_b)} ativos)`} · {m.license}
+            {m.active_params_b < m.params_b && ` ${t("({n} ativos)", { n: params(m.active_params_b) })}`} · {m.license}
           </div>
         </div>
         <FitBadge level={m.fit.level} label={m.fit.label} />
       </div>
 
-      <p className="mt-1.5 mb-3 line-clamp-2 min-h-[36px] text-[12.5px] leading-snug text-fg/80">{m.description}</p>
+      <p className="mt-1.5 mb-3 line-clamp-2 min-h-[36px] text-[12.5px] leading-snug text-fg/80">{t(m.description)}</p>
 
       <div className="mb-3 grid grid-cols-3 gap-2 rounded-lg bg-field px-3 py-2 text-[11.5px]">
         <div>
           <div className="flex items-center gap-1 text-muted">
-            <Gauge className="size-3" /> Velocidade <SpeedSource m={m} />
+            <Gauge className="size-3" /> {t("Velocidade")} <SpeedSource m={m} />
           </div>
           <div className="font-semibold" title={m.fit.speedLabel}>
             {speedText(m)}
@@ -143,13 +150,13 @@ export function ModelCard({ m, highlight }: { m: ModelView; highlight?: boolean 
         </div>
         <div>
           <div className="flex items-center gap-1 text-muted">
-            <MemoryStick className="size-3" /> Memória
+            <MemoryStick className="size-3" /> {t("Memória")}
           </div>
           <div className="font-semibold">{gb(m.fit.requiredGb)}</div>
         </div>
         <div>
           <div className="flex items-center gap-1 text-muted">
-            <Cpu className="size-3" /> Roda em
+            <Cpu className="size-3" /> {t("Roda em")}
           </div>
           <div className="font-semibold">{m.fit.mode}</div>
         </div>
@@ -157,8 +164,8 @@ export function ModelCard({ m, highlight }: { m: ModelView; highlight?: boolean 
 
       <div className="mb-3 flex flex-wrap gap-1">
         <Tag>{m.installed ? m.installedQuant : m.fit.quant}</Tag>
-        {m.tags.map((t) => (
-          <Tag key={t}>{t}</Tag>
+        {m.tags.map((tag) => (
+          <Tag key={tag}>{t(tag)}</Tag>
         ))}
       </div>
 
@@ -174,21 +181,21 @@ export function ModelCard({ m, highlight }: { m: ModelView; highlight?: boolean 
             ) : (
               <>
                 <Button variant="primary" size="sm" icon={<MessageSquare className="size-3.5" />} onClick={a.chat}>
-                  Conversar
+                  {t("Conversar")}
                 </Button>
                 {!a.active && (
                   <Button size="sm" icon={<Play className="size-3" />} loading={a.busy} onClick={a.load} disabled={app.runtime?.state === "missing"}>
-                    Carregar
+                    {t("Carregar")}
                   </Button>
                 )}
-                {a.active && <span className="text-[12px] font-medium text-ok">Em uso</span>}
-                <button title="Medir a velocidade real neste computador" onClick={a.measure} disabled={a.busy} className="rounded-md p-1 text-muted hover:bg-hover hover:text-fg disabled:opacity-50">
+                {a.active && <span className="text-[12px] font-medium text-ok">{t("Em uso")}</span>}
+                <button title={t("Medir a velocidade real neste computador")} onClick={a.measure} disabled={a.busy} className="rounded-md p-1 text-muted hover:bg-hover hover:text-fg disabled:opacity-50">
                   <Gauge className={clsx("size-3.5", a.busy && "animate-pulse")} />
                 </button>
               </>
             )}
             <div className="flex-1" />
-            <button title="Remover" onClick={a.remove} className="rounded-md p-1 text-muted hover:bg-hover hover:text-bad">
+            <button title={t("Remover")} onClick={a.remove} className="rounded-md p-1 text-muted hover:bg-hover hover:text-bad">
               <Trash2 className="size-3.5" />
             </button>
           </>
@@ -201,16 +208,16 @@ export function ModelCard({ m, highlight }: { m: ModelView; highlight?: boolean 
               loading={a.busy}
               onClick={() => a.startDownload()}
             >
-              Baixar · {bytes(m.fit.downloadBytes)}
+              {t("Baixar · {size}", { size: bytes(m.fit.downloadBytes) })}
             </Button>
             {m.files.length > 1 && (
               <select
                 className="h-[24px] rounded-md border border-line bg-card px-1 text-[11.5px] text-muted outline-none"
                 value=""
                 onChange={(e) => e.target.value && a.startDownload(e.target.value)}
-                title="Escolher outra quantização"
+                title={t("Escolher outra quantização")}
               >
-                <option value="">Outras versões</option>
+                <option value="">{t("Outras versões")}</option>
                 {m.files.map((f) => (
                   <option key={f.quant} value={f.quant}>
                     {f.quant} · {bytes(f.size + (m.mmproj?.size ?? 0))}

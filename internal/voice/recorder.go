@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/gen2brain/malgo"
 )
 
@@ -41,11 +42,11 @@ func (r *Recorder) Start() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.device != nil {
-		return errors.New("já está gravando")
+		return errors.New(i18n.T("já está gravando"))
 	}
 	ctx, err := malgo.InitContext(nil, malgo.ContextConfig{}, nil)
 	if err != nil {
-		return errors.New("não foi possível acessar o áudio do sistema: " + err.Error())
+		return errors.New(i18n.Tf("não foi possível acessar o áudio do sistema: %s", err))
 	}
 	cfg := malgo.DefaultDeviceConfig(malgo.Capture)
 	cfg.Capture.Format = malgo.FormatS16
@@ -73,13 +74,13 @@ func (r *Recorder) Start() error {
 	if err != nil {
 		_ = ctx.Uninit()
 		ctx.Free()
-		return errors.New("nenhum microfone disponível: " + err.Error())
+		return errors.New(i18n.Tf("nenhum microfone disponível: %s", err))
 	}
 	if err := dev.Start(); err != nil {
 		dev.Uninit()
 		_ = ctx.Uninit()
 		ctx.Free()
-		return errors.New("não foi possível iniciar o microfone: " + err.Error())
+		return errors.New(i18n.Tf("não foi possível iniciar o microfone: %s", err))
 	}
 	r.ctx, r.device, r.started, r.level = ctx, dev, time.Now(), 0
 	r.stopTick = make(chan struct{})
@@ -128,7 +129,7 @@ func (r *Recorder) Stop(path string) (time.Duration, error) {
 	r.mu.Lock()
 	if r.device == nil {
 		r.mu.Unlock()
-		return 0, errors.New("nenhuma gravação em andamento")
+		return 0, errors.New(i18n.T("nenhuma gravação em andamento"))
 	}
 	dev := r.device
 	r.mu.Unlock()
@@ -141,7 +142,7 @@ func (r *Recorder) Stop(path string) (time.Duration, error) {
 
 	duration := time.Duration(len(pcm)/2) * time.Second / sampleRate
 	if duration < 300*time.Millisecond {
-		return duration, errors.New("gravação curta demais")
+		return duration, errors.New(i18n.T("gravação curta demais"))
 	}
 	return duration, writeWAV(path, pcm)
 }

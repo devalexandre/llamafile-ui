@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
 	"github.com/devalexandre/llamafile-ui/internal/sysproc"
 	"github.com/devalexandre/llamafile-ui/internal/tools"
@@ -164,10 +165,10 @@ func (m *Manager) Detect() Status {
 	if m.status.State != StateRunning && m.status.State != StateStarting {
 		if path == "" {
 			m.status.State = StateMissing
-			m.status.Message = "llamafile não encontrado"
+			m.status.Message = i18n.T("llamafile não encontrado")
 		} else {
 			m.status.State = StateStopped
-			m.status.Message = "Parado"
+			m.status.Message = i18n.T("Parado")
 		}
 		m.status.Error = ""
 	}
@@ -206,15 +207,15 @@ func (m *Manager) Start(modelID string) error {
 	m.mu.Unlock()
 	if bin == "" {
 		m.Detect()
-		return errors.New("llamafile não encontrado — baixe-o em Configurações")
+		return errors.New(i18n.T("llamafile não encontrado — baixe-o em Configurações"))
 	}
 	modelPath := m.models.ModelPath(modelID)
 	if modelPath == "" {
-		return fmt.Errorf("o modelo %q não está instalado", modelID)
+		return errors.New(i18n.Tf("o modelo %q não está instalado", modelID))
 	}
 	if !portFree(cfg.Host, port) {
-		err := fmt.Errorf("a porta %d já está em uso — escolha outra em Configurações", port)
-		m.setState(StateError, "Porta em uso", err.Error())
+		err := errors.New(i18n.Tf("a porta %d já está em uso — escolha outra em Configurações", port))
+		m.setState(StateError, i18n.T("Porta em uso"), err.Error())
 		return err
 	}
 
@@ -235,7 +236,7 @@ func (m *Manager) Start(modelID string) error {
 
 	m.appendLog(fmt.Sprintf("$ %s %s", filepath.Base(bin), strings.Join(args, " ")))
 	if err := cmd.Start(); err != nil {
-		m.setState(StateError, "Falha ao iniciar", err.Error())
+		m.setState(StateError, i18n.T("Falha ao iniciar"), err.Error())
 		return err
 	}
 
@@ -247,7 +248,7 @@ func (m *Manager) Start(modelID string) error {
 	m.status.ModelID = modelID
 	m.status.ModelName = m.models.DisplayName(modelID)
 	m.status.State = StateStarting
-	m.status.Message = "Carregando " + m.status.ModelName + "…"
+	m.status.Message = i18n.Tf("Carregando %s…", m.status.ModelName)
 	m.status.Error = ""
 	m.mu.Unlock()
 	m.emit()
@@ -266,9 +267,9 @@ func (m *Manager) Start(modelID string) error {
 		if !current {
 			return
 		}
-		msg := "Servidor encerrado"
+		msg := i18n.T("Servidor encerrado")
 		if err != nil {
-			msg = "O llamafile encerrou inesperadamente"
+			msg = i18n.T("O llamafile encerrou inesperadamente")
 		}
 		if wasRunning {
 			if detail := lastError(m.Logs()); err != nil && detail != "" {
@@ -342,15 +343,15 @@ func (m *Manager) waitHealthy(cmd *exec.Cmd, exited chan struct{}) {
 				return
 			}
 			m.status.State = StateRunning
-			m.status.Message = "Pronto"
+			m.status.Message = i18n.T("Pronto")
 			m.mu.Unlock()
 			m.emit()
 			m.finishStart(cmd, nil)
 			return
 		}
 	}
-	m.setState(StateError, "Tempo esgotado", "o modelo demorou demais para carregar")
-	m.finishStart(cmd, errors.New("tempo esgotado ao carregar o modelo"))
+	m.setState(StateError, i18n.T("Tempo esgotado"), i18n.T("o modelo demorou demais para carregar"))
+	m.finishStart(cmd, errors.New(i18n.T("tempo esgotado ao carregar o modelo")))
 }
 
 // WaitReady blocks until the current start attempt succeeds or fails.
@@ -363,7 +364,7 @@ func (m *Manager) WaitReady(ctx context.Context) error {
 		return nil
 	}
 	if ready == nil {
-		return errors.New("o servidor não está em execução")
+		return errors.New(i18n.T("o servidor não está em execução"))
 	}
 	select {
 	case <-ready:
@@ -407,13 +408,13 @@ func (m *Manager) Stop() {
 		select {
 		case <-m.ready:
 		default:
-			m.startErr = errors.New("servidor parado")
+			m.startErr = errors.New(i18n.T("servidor parado"))
 			close(m.ready)
 		}
 	}
 	m.status.ModelID, m.status.ModelName = "", ""
 	m.mu.Unlock()
-	m.setState(StateStopped, "Parado", "")
+	m.setState(StateStopped, i18n.T("Parado"), "")
 	m.Detect()
 }
 
@@ -421,7 +422,7 @@ func (m *Manager) Stop() {
 func (m *Manager) Restart() error {
 	id := m.Status().ModelID
 	if id == "" {
-		return errors.New("nenhum modelo carregado")
+		return errors.New(i18n.T("nenhum modelo carregado"))
 	}
 	return m.Start(id)
 }

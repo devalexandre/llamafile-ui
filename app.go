@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
@@ -19,6 +18,7 @@ import (
 	"github.com/devalexandre/llamafile-ui/internal/downloads"
 	"github.com/devalexandre/llamafile-ui/internal/eventbus"
 	"github.com/devalexandre/llamafile-ui/internal/hardware"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/rag"
@@ -36,22 +36,23 @@ const modelKeyPrefix = "model:"
 // interfaces used by internal packages are implemented by [backend] so they
 // are not exposed to JavaScript.
 type App struct {
-	ctx       context.Context
-	window    *application.WebviewWindow
-	bus       *eventbus.Bus
-	onRuntime func(runtime.Status) // tray menu hook
-	settings  *settings.Store
-	catalog   *catalog.Catalog
-	downloads *downloads.Manager
-	runtime   *runtime.Manager // chat server
-	embedder  *runtime.Manager // embeddings server (port + 1)
-	chat      *chat.Service
-	docs      *rag.Store
-	images    *imagegen.Generator
-	voice     *voice.Store
-	recorder  voice.Recorder
-	bench     *bench.Store
-	speaker   tts.Speaker
+	ctx        context.Context
+	window     *application.WebviewWindow
+	bus        *eventbus.Bus
+	onRuntime  func(runtime.Status) // tray menu hook
+	onLanguage func()               // tray menu hook
+	settings   *settings.Store
+	catalog    *catalog.Catalog
+	downloads  *downloads.Manager
+	runtime    *runtime.Manager // chat server
+	embedder   *runtime.Manager // embeddings server (port + 1)
+	chat       *chat.Service
+	docs       *rag.Store
+	images     *imagegen.Generator
+	voice      *voice.Store
+	recorder   voice.Recorder
+	bench      *bench.Store
+	speaker    tts.Speaker
 
 	hwOnce sync.Once
 	hwMu   sync.RWMutex
@@ -66,6 +67,7 @@ type App struct {
 
 func NewApp() (*App, error) {
 	a := &App{settings: settings.Load(), downloads: downloads.New(), pendingTools: map[string]string{}, chatImages: map[string]chatImageJob{}, imagePending: map[string]bool{}, bus: eventbus.New()}
+	i18n.SetLanguage(a.settings.Get().Language)
 	cat, err := catalog.New(func() string { return a.settings.Get().ModelsDir })
 	if err != nil {
 		return nil, err
@@ -209,7 +211,7 @@ func (a *App) fitHardware() hardware.Info {
 	return hw
 }
 
-func (a *App) GetHardware() hardware.Info { return a.hardware() }
+func (a *App) GetHardware() hardware.Info { return a.hardware().Localized() }
 
 func (a *App) RefreshHardware() hardware.Info {
 	info := hardware.Detect()
@@ -217,7 +219,7 @@ func (a *App) RefreshHardware() hardware.Info {
 	a.hw = info
 	a.hwMu.Unlock()
 	a.emit("catalog:changed")
-	return info
+	return info.Localized()
 }
 
 func (a *App) GetDiskFreeGB() float64 { return hardware.DiskFreeGB(a.settings.Get().ModelsDir) }
@@ -237,6 +239,7 @@ func (a *App) updateSettings(fn func(*settings.Settings)) error {
 	}
 	saved, err := a.settings.Save(after)
 	if err == nil {
+		i18n.SetLanguage(saved.Language)
 		a.emit("settings:changed", saved)
 	}
 	return err
@@ -248,8 +251,13 @@ func (a *App) SaveSettings(s settings.Settings) (settings.Settings, error) {
 	if err != nil {
 		return saved, err
 	}
+	i18n.SetLanguage(saved.Language)
+	languageChanged := saved.Language != before.Language
+	if languageChanged && a.onLanguage != nil {
+		a.onLanguage() // relabel the tray menu
+	}
 	a.emit("settings:changed", saved)
-	if saved.ModelsDir != before.ModelsDir || saved.ContextSize != before.ContextSize {
+	if languageChanged || saved.ModelsDir != before.ModelsDir || saved.ContextSize != before.ContextSize {
 		a.emit("catalog:changed")
 	}
 	if saved.LlamafilePath != before.LlamafilePath {
@@ -269,7 +277,7 @@ func (a *App) ResetServerSettings() (settings.Settings, error) {
 }
 
 func (a *App) ChooseModelsDir() (string, error) {
-	dir, err := a.openDirectory("Escolha a pasta de modelos", a.settings.Get().ModelsDir)
+	dir, err := a.openDirectory(i18n.T("Escolha a pasta de modelos"), a.settings.Get().ModelsDir)
 	if err != nil || dir == "" {
 		return "", err
 	}
@@ -297,7 +305,7 @@ func (a *App) OpenDataFolder() error   { return openPath(paths.DataDir()) }
 
 func (a *App) ctxSize() int { return a.settings.Get().ContextSize }
 
-func (a *App) GetCategories() []catalog.Category { return catalog.Categories }
+func (a *App) GetCategories() []catalog.Category { return catalog.CategoriesT() }
 
 func (a *App) GetRecommended(category string) []catalog.View {
 	return a.catalog.Recommended(category, a.fitHardware(), a.ctxSize())
@@ -325,8 +333,8 @@ func (a *App) DownloadModel(id, quant string) error {
 		need += f.Size
 	}
 	if free := hardware.DiskFreeGB(a.settings.Get().ModelsDir); free > 0 && free*hardware.GiB < float64(need)*1.05 {
-		return fmt.Errorf("espaço insuficiente: são necessários %.1f GB e há %.1f GB livres",
-			float64(need)/hardware.GiB, free)
+		return errors.New(i18n.Tf("espaço insuficiente: são necessários %.1f GB e há %.1f GB livres",
+			float64(need)/hardware.GiB, free))
 	}
 	return a.downloads.Start(modelKeyPrefix+id, m.Name, plan)
 }
@@ -430,7 +438,7 @@ func (a *App) DetectLlamafile() runtime.Status {
 }
 
 func (a *App) ChooseLlamafileBinary() (runtime.Status, error) {
-	path, err := a.openFile("Selecione o executável do llamafile")
+	path, err := a.openFile(i18n.T("Selecione o executável do llamafile"))
 	if err != nil || path == "" {
 		return a.runtime.Status(), err
 	}

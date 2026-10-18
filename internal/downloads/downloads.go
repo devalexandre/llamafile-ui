@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"io"
 	"net/http"
 	"os"
@@ -178,7 +179,7 @@ func (m *Manager) fetch(ctx context.Context, t *task, f File) error {
 	part := f.Dest + ".part"
 	out, err := os.OpenFile(part, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
-		return fmt.Errorf("não foi possível gravar %s: %w", part, err)
+		return fmt.Errorf(i18n.T("não foi possível gravar %s: %w"), part, err)
 	}
 	defer out.Close()
 	st, _ := out.Stat()
@@ -215,9 +216,9 @@ func (m *Manager) fetch(ctx context.Context, t *task, f File) error {
 		if f.Size > 0 && existing == f.Size {
 			break // already complete
 		}
-		return fmt.Errorf("servidor recusou retomar o download (HTTP 416)")
+		return errors.New(i18n.T("servidor recusou retomar o download (HTTP 416)"))
 	default:
-		return fmt.Errorf("HTTP %d ao baixar %s", resp.StatusCode, filepath.Base(f.Dest))
+		return errors.New(i18n.Tf("HTTP %d ao baixar %s", resp.StatusCode, filepath.Base(f.Dest)))
 	}
 
 	m.mu.Lock()
@@ -259,7 +260,7 @@ func (m *Manager) fetch(ctx context.Context, t *task, f File) error {
 		}
 	}
 	if f.Size > 0 && written != f.Size {
-		return fmt.Errorf("download incompleto de %s (%d de %d bytes)", filepath.Base(f.Dest), written, f.Size)
+		return errors.New(i18n.Tf("download incompleto de %s (%d de %d bytes)", filepath.Base(f.Dest), written, f.Size))
 	}
 	if err := out.Close(); err != nil {
 		return err

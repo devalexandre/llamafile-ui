@@ -10,6 +10,7 @@ import (
 	"math"
 	"os"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	_ "golang.org/x/image/webp"
 )
 
@@ -19,12 +20,12 @@ import (
 func PrepareImg2Img(req *Request) error {
 	f, err := os.Open(req.InitImage)
 	if err != nil {
-		return errors.New("não foi possível abrir a imagem de referência")
+		return errors.New(i18n.T("não foi possível abrir a imagem de referência"))
 	}
 	defer f.Close()
 	cfg, _, err := image.DecodeConfig(f)
 	if err != nil || cfg.Width == 0 || cfg.Height == 0 {
-		return errors.New("formato de imagem de referência não suportado (use PNG, JPG, WebP ou GIF)")
+		return errors.New(i18n.T("formato de imagem de referência não suportado (use PNG, JPG, WebP ou GIF)"))
 	}
 	req.Width, req.Height = FitSize(cfg.Width, cfg.Height, max(req.Width, req.Height))
 	if req.Strength <= 0 {
@@ -81,12 +82,12 @@ func prepareVideo(req *Request) error {
 	if req.InitImage != "" {
 		f, err := os.Open(req.InitImage)
 		if err != nil {
-			return errors.New("não foi possível abrir a imagem de referência")
+			return errors.New(i18n.T("não foi possível abrir a imagem de referência"))
 		}
 		cfg, _, err := image.DecodeConfig(f)
 		f.Close()
 		if err != nil || cfg.Width == 0 || cfg.Height == 0 {
-			return errors.New("formato de imagem de referência não suportado (use PNG, JPG, WebP ou GIF)")
+			return errors.New(i18n.T("formato de imagem de referência não suportado (use PNG, JPG, WebP ou GIF)"))
 		}
 		req.Width, req.Height = FitSize(cfg.Width, cfg.Height, max(req.Width, req.Height))
 	}

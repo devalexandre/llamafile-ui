@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/tools"
 )
 
@@ -153,11 +154,11 @@ func (g *Generator) Busy() string {
 func (g *Generator) Generate(req Request) (string, error) {
 	req.Prompt = strings.TrimSpace(req.Prompt)
 	if req.Prompt == "" {
-		return "", errors.New("descreva o que você quer gerar")
+		return "", errors.New(i18n.T("descreva o que você quer gerar"))
 	}
 	bin := g.backend.Binary()
 	if bin == "" {
-		return "", errors.New("nenhum motor de imagens instalado")
+		return "", errors.New(i18n.T("nenhum motor de imagens instalado"))
 	}
 	spec, err := g.backend.Model(req.ModelID)
 	if err != nil {
@@ -187,7 +188,7 @@ func (g *Generator) Generate(req Request) (string, error) {
 	g.mu.Lock()
 	if g.jobID != "" {
 		g.mu.Unlock()
-		return "", errors.New("já existe uma imagem sendo gerada")
+		return "", errors.New(i18n.T("já existe uma imagem sendo gerada"))
 	}
 	jobID := uuid.NewString()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -344,10 +345,10 @@ func (g *Generator) run(ctx context.Context, jobID, bin string, spec ModelSpec, 
 		if ctx.Err() != nil {
 			return Image{}, ctx.Err()
 		}
-		return Image{}, fmt.Errorf("o motor de imagens falhou: %s", lastError(tail))
+		return Image{}, errors.New(i18n.Tf("o motor de imagens falhou: %s", lastError(tail)))
 	}
 	if _, err := os.Stat(out); err != nil {
-		return Image{}, fmt.Errorf("a imagem não foi gerada: %s", lastError(tail))
+		return Image{}, errors.New(i18n.Tf("a imagem não foi gerada: %s", lastError(tail)))
 	}
 
 	img := Image{Prompt: req.Prompt, Negative: req.Negative, ModelID: req.ModelID, ModelName: spec.Name,
@@ -384,7 +385,7 @@ func lastError(lines []string) string {
 	if len(lines) > 0 {
 		return strings.TrimSpace(lines[len(lines)-1])
 	}
-	return "erro desconhecido"
+	return i18n.T("erro desconhecido")
 }
 
 func (g *Generator) List() ([]Image, error) {

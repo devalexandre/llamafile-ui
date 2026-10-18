@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 )
 
@@ -17,7 +18,8 @@ type Settings struct {
 	ContextSize   int     `json:"contextSize"`
 	Threads       int     `json:"threads"` // 0 = auto
 	AutoStart     bool    `json:"autoStart"`
-	Theme         string  `json:"theme"` // system, light, dark
+	Theme         string  `json:"theme"`    // system, light, dark
+	Language      string  `json:"language"` // UI language (i18n code); "" = detect from the system
 	ModelsDir     string  `json:"modelsDir"`
 	SystemPrompt  string  `json:"systemPrompt"`
 	Temperature   float64 `json:"temperature"`
@@ -40,6 +42,14 @@ type Settings struct {
 	AutoSpeak  bool    `json:"autoSpeak"`  // read every new answer aloud
 }
 
+// legacyPrompt was the default system prompt before translations.
+const legacyPrompt = "Você é um assistente útil, direto e preciso. Responda no idioma do usuário."
+
+// DefaultPrompt is the system prompt used when none is set, in the UI language.
+func DefaultPrompt() string {
+	return i18n.T("Você é um assistente útil, direto e preciso. Responda no idioma do usuário.")
+}
+
 func Defaults() Settings {
 	return Settings{
 		Host:          "127.0.0.1",
@@ -49,7 +59,7 @@ func Defaults() Settings {
 		AutoStart:     true,
 		Theme:         "system",
 		ModelsDir:     paths.DefaultModelsDir(),
-		SystemPrompt:  "Você é um assistente útil, direto e preciso. Responda no idioma do usuário.",
+		SystemPrompt:  "", // "" = the default prompt in the UI language (see DefaultPrompt)
 		Temperature:   0.7,
 		AutoTitle:     true,
 		VoiceLanguage: "auto",
@@ -107,6 +117,9 @@ func sanitize(s Settings) Settings {
 	}
 	if s.ImageEngine != "diffusionfile" && s.ImageEngine != "sd-cpp" {
 		s.ImageEngine = "auto"
+	}
+	if s.SystemPrompt == legacyPrompt {
+		s.SystemPrompt = "" // the old Portuguese default now follows the UI language
 	}
 	if s.TTSSpeed < 0.5 || s.TTSSpeed > 2 {
 		s.TTSSpeed = d.TTSSpeed

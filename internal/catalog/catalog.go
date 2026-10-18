@@ -5,6 +5,7 @@ package catalog
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/devalexandre/llamafile-ui/internal/hardware"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 )
 
 //go:embed catalog.json
@@ -129,15 +131,24 @@ type Category struct {
 }
 
 var Categories = []Category{
-	{"chat", "Chat", "Assistentes para conversar, escrever e resumir"},
-	{"code", "Código", "Gerar, explicar e refatorar código"},
-	{"reasoning", "Raciocínio", "Lógica, matemática e problemas passo a passo"},
-	{"vision", "Visão", "Entendem imagens, capturas de tela e documentos"},
-	{"image", "Imagens", "Geram imagens a partir de texto"},
-	{"video", "Vídeos", "Geram vídeos curtos a partir de texto ou de uma imagem"},
-	{"voice", "Voz", "Transcrição de áudio com Whisper"},
-	{"embedding", "Embeddings", "Busca semântica nos seus documentos"},
-	{"tts", "Leitura em voz alta", "Vozes para ouvir as respostas do chat (Piper)"},
+	{"chat", i18n.N("Chat"), i18n.N("Assistentes para conversar, escrever e resumir")},
+	{"code", i18n.N("Código"), i18n.N("Gerar, explicar e refatorar código")},
+	{"reasoning", i18n.N("Raciocínio"), i18n.N("Lógica, matemática e problemas passo a passo")},
+	{"vision", i18n.N("Visão"), i18n.N("Entendem imagens, capturas de tela e documentos")},
+	{"image", i18n.N("Imagens"), i18n.N("Geram imagens a partir de texto")},
+	{"video", i18n.N("Vídeos"), i18n.N("Geram vídeos curtos a partir de texto ou de uma imagem")},
+	{"voice", i18n.N("Voz"), i18n.N("Transcrição de áudio com Whisper")},
+	{"embedding", i18n.N("Embeddings"), i18n.N("Busca semântica nos seus documentos")},
+	{"tts", i18n.N("Leitura em voz alta"), i18n.N("Vozes para ouvir as respostas do chat (Piper)")},
+}
+
+// CategoriesT returns Categories with labels and descriptions in the current language.
+func CategoriesT() []Category {
+	out := make([]Category, len(Categories))
+	for i, c := range Categories {
+		out[i] = Category{ID: c.ID, Label: i18n.T(c.Label), Description: i18n.T(c.Description)}
+	}
+	return out
 }
 
 type Catalog struct {
@@ -344,7 +355,7 @@ func (c *Catalog) localModel(name string) *Model {
 	return &Model{
 		ID:            "local:" + name,
 		Name:          strings.TrimSuffix(name, filepath.Ext(name)),
-		Publisher:     "Arquivo local",
+		Publisher:     i18n.T("Arquivo local"),
 		ParamsB:       params,
 		ActiveParamsB: params,
 		Context:       8192,
@@ -352,7 +363,7 @@ func (c *Catalog) localModel(name string) *Model {
 		Categories:    []string{"chat"},
 		Quality:       map[string]float64{"chat": 55},
 		Runtime:       RuntimeLlamafile,
-		Description:   "Modelo GGUF adicionado manualmente à pasta de modelos.",
+		Description:   i18n.N("Modelo GGUF adicionado manualmente à pasta de modelos."),
 		Files:         []File{{Quant: "GGUF", File: name, Size: size}},
 	}
 }
@@ -361,7 +372,7 @@ func (c *Catalog) localModel(name string) *Model {
 func (c *Catalog) DownloadPlan(id, quant string, hw hardware.Info, ctx int) (*Model, []File, error) {
 	m := c.Find(id)
 	if m == nil || strings.HasPrefix(id, "local:") {
-		return nil, nil, fmt.Errorf("modelo %q não encontrado no catálogo", id)
+		return nil, nil, errors.New(i18n.Tf("modelo %q não encontrado no catálogo", id))
 	}
 	if quant == "" {
 		quant = EvaluateBestWith(m, primaryCategory(m), hw, ctx, c.cal).Quant
@@ -373,7 +384,7 @@ func (c *Catalog) DownloadPlan(id, quant string, hw hardware.Info, ctx int) (*Mo
 		}
 	}
 	if len(files) == 0 {
-		return nil, nil, fmt.Errorf("quantização %q não disponível para %s", quant, m.Name)
+		return nil, nil, errors.New(i18n.Tf("quantização %q não disponível para %s", quant, m.Name))
 	}
 	return m, append(files, m.extras()...), nil
 }
@@ -385,7 +396,7 @@ func (c *Catalog) Dest(f File) string { return c.path(f.File) }
 func (c *Catalog) Remove(id string) error {
 	m := c.Find(id)
 	if m == nil {
-		return fmt.Errorf("modelo %q não encontrado", id)
+		return errors.New(i18n.Tf("modelo %q não encontrado", id))
 	}
 	shared := map[string]bool{}
 	for i := range c.models {

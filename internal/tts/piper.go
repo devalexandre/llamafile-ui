@@ -11,6 +11,7 @@ import (
 	goruntime "runtime"
 
 	"github.com/devalexandre/llamafile-ui/internal/archive"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 )
 
@@ -68,7 +69,7 @@ func Install(file string) error {
 	}
 	if err := archive.Extract(file, tmp); err != nil {
 		_ = os.RemoveAll(tmp)
-		return fmt.Errorf("não foi possível extrair o Piper: %w", err)
+		return fmt.Errorf(i18n.T("não foi possível extrair o Piper: %w"), err)
 	}
 	root := filepath.Join(tmp, "piper")
 	if _, err := os.Stat(root); err != nil {
@@ -80,7 +81,7 @@ func Install(file string) error {
 	}
 	_ = os.RemoveAll(tmp)
 	if Binary() == "" {
-		return errors.New("o pacote do Piper não contém o executável")
+		return errors.New(i18n.T("o pacote do Piper não contém o executável"))
 	}
 	return os.Chmod(Binary(), 0o755)
 }

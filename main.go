@@ -14,6 +14,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 
 	"github.com/devalexandre/llamafile-ui/internal/eventbus"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/runtime"
 )
@@ -76,7 +77,7 @@ func main() {
 
 	app := application.New(application.Options{
 		Name:        "Llamafile UI",
-		Description: "Chat, imagens, voz e documentos com IA local usando llamafile",
+		Description: i18n.T("Chat, imagens, voz e documentos com IA local usando llamafile"),
 		Icon:        icon,
 		Services:    []application.Service{application.NewService(svc)},
 		// Any quit path (tray "Sair", SIGTERM, logout) must not be turned into
@@ -141,19 +142,25 @@ func main() {
 		tray.SetIcon(trayIcon)
 	}
 	tray.SetTooltip("Llamafile UI")
+	if goruntime.GOOS == "linux" {
+		// On Linux Wails ignores the tooltip and names the tray item after its
+		// label (default "Wails"). On macOS the label would show as text next
+		// to the icon, so it is only set here.
+		tray.SetLabel("Llamafile UI")
+	}
 
 	menu := application.NewMenu()
-	menu.Add("Abrir Llamafile UI").OnClick(func(*application.Context) { show() })
-	menu.Add("Nova conversa").OnClick(func(*application.Context) {
+	openItem := menu.Add(i18n.T("Abrir Llamafile UI")).OnClick(func(*application.Context) { show() })
+	newChat := menu.Add(i18n.T("Nova conversa")).OnClick(func(*application.Context) {
 		show()
 		svc.emit("app:new-chat")
 	})
 	menu.AddSeparator()
-	status := menu.Add("llamafile parado").SetEnabled(false)
-	stop := menu.Add("Parar o servidor").SetEnabled(false)
+	status := menu.Add(i18n.T("llamafile parado")).SetEnabled(false)
+	stop := menu.Add(i18n.T("Parar o servidor")).SetEnabled(false)
 	stop.OnClick(func(*application.Context) { svc.StopServer() })
 	menu.AddSeparator()
-	menu.Add("Sair").OnClick(func(*application.Context) {
+	quit := menu.Add(i18n.T("Sair")).OnClick(func(*application.Context) {
 		quitting.Store(true)
 		app.Quit()
 	})
@@ -162,20 +169,29 @@ func main() {
 
 	// Keep the tray menu in sync with the chat server.
 	svc.onRuntime = func(s runtime.Status) {
-		label := "llamafile parado"
+		label := i18n.T("llamafile parado")
 		switch s.State {
 		case runtime.StateRunning:
 			label = "● " + s.ModelName
 		case runtime.StateStarting:
-			label = "Carregando " + s.ModelName + "…"
+			label = i18n.Tf("Carregando %s…", s.ModelName)
 		case runtime.StateMissing:
-			label = "llamafile não instalado"
+			label = i18n.T("llamafile não instalado")
 		case runtime.StateError:
-			label = "Erro no servidor"
+			label = i18n.T("Erro no servidor")
 		}
 		status.SetLabel(label)
 		stop.SetEnabled(s.State == runtime.StateRunning || s.State == runtime.StateStarting)
 		menu.Update()
+	}
+
+	// The language can change while the app is open: relabel the tray menu.
+	svc.onLanguage = func() {
+		openItem.SetLabel(i18n.T("Abrir Llamafile UI"))
+		newChat.SetLabel(i18n.T("Nova conversa"))
+		stop.SetLabel(i18n.T("Parar o servidor"))
+		quit.SetLabel(i18n.T("Sair"))
+		svc.onRuntime(svc.runtime.Status()) // updates the status label and the menu
 	}
 
 	if err := app.Run(); err != nil {

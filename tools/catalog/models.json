@@ -47,7 +47,7 @@
       "leve",
       "multilíngue"
     ],
-    "description": "Modelo compacto do Google, rápido e com bom português para o tamanho.",
+    "description": "Modelo compacto do Google, rápido e bom em vários idiomas para o tamanho.",
     "runtime": "llamafile",
     "active_params_b": 1.0,
     "quants": [
@@ -286,7 +286,7 @@
       "visão",
       "multilíngue"
     ],
-    "description": "Conversa muito bem em português e entende imagens.",
+    "description": "Conversa muito bem em vários idiomas, incluindo português, e entende imagens.",
     "runtime": "llamafile",
     "active_params_b": 4.3,
     "quants": [
@@ -723,7 +723,7 @@
     "tags": [
       "transcrição"
     ],
-    "description": "Bom ponto de partida para ditado em português.",
+    "description": "Bom ponto de partida para ditado em vários idiomas.",
     "active_params_b": 0.074,
     "quants": [
       {
@@ -1166,7 +1166,7 @@
       "multilíngue",
       "RAG"
     ],
-    "description": "Embeddings multilíngues de alta qualidade — ótimo para documentos em português.",
+    "description": "Embeddings multilíngues de alta qualidade — ótimos para documentos em vários idiomas.",
     "quants": [
       {
         "quant": "Q8_0",
@@ -1569,6 +1569,348 @@
       "frames": 49,
       "fps": 24,
       "image_input": true
+    }
+  },
+  {
+    "id": "piper-zh-cn-huayan",
+    "name": "Huayan (中文)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 70
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "chinês",
+      "voz feminina"
+    ],
+    "description": "Voz feminina em mandarim (chinês simplificado).",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "zh/zh_CN/huayan/medium/zh_CN-huayan-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "zh/zh_CN/huayan/medium/zh_CN-huayan-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "zh-CN"
+    }
+  },
+  {
+    "id": "piper-hi-in-priyamvada",
+    "name": "Priyamvada (हिन्दी)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 70
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "hindi",
+      "voz feminina"
+    ],
+    "description": "Voz feminina em hindi.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "hi/hi_IN/priyamvada/medium/hi_IN-priyamvada-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "hi/hi_IN/priyamvada/medium/hi_IN-priyamvada-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "hi-IN"
+    }
+  },
+  {
+    "id": "piper-es-mx-ald",
+    "name": "Ald (es-MX)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 71
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "espanhol",
+      "voz masculina"
+    ],
+    "description": "Voz masculina em espanhol latino-americano.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "es/es_MX/ald/medium/es_MX-ald-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "es/es_MX/ald/medium/es_MX-ald-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "es-MX"
+    }
+  },
+  {
+    "id": "piper-ar-jo-kareem",
+    "name": "Kareem (العربية)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 68
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "árabe",
+      "voz masculina"
+    ],
+    "description": "Voz masculina em árabe.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "ar/ar_JO/kareem/medium/ar_JO-kareem-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "ar/ar_JO/kareem/medium/ar_JO-kareem-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "ar-JO"
+    }
+  },
+  {
+    "id": "piper-fr-fr-siwis",
+    "name": "Siwis (Français)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 72
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "francês",
+      "voz feminina"
+    ],
+    "description": "Voz feminina em francês, clara e natural.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "fr-FR"
+    }
+  },
+  {
+    "id": "piper-ru-ru-irina",
+    "name": "Irina (Русский)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 70
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "russo",
+      "voz feminina"
+    ],
+    "description": "Voz feminina em russo.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "ru-RU"
+    }
+  },
+  {
+    "id": "piper-id-id-news",
+    "name": "News TTS (Indonesia)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 66
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "indonésio",
+      "voz feminina"
+    ],
+    "description": "Voz em indonésio, estilo locução de notícias.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "id/id_ID/news_tts/medium/id_ID-news_tts-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "id/id_ID/news_tts/medium/id_ID-news_tts-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "id-ID"
+    }
+  },
+  {
+    "id": "piper-de-de-thorsten",
+    "name": "Thorsten (Deutsch)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 74
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "alemão",
+      "voz masculina"
+    ],
+    "description": "Voz masculina em alemão, uma das mais naturais do Piper.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "de-DE"
+    }
+  },
+  {
+    "id": "piper-en-gb-alba",
+    "name": "Alba (en-GB)",
+    "publisher": "Piper (Rhasspy)",
+    "params_b": 0.015,
+    "context": 0,
+    "kv_mb_per_1k": 0,
+    "categories": [
+      "tts"
+    ],
+    "quality": {
+      "tts": 72
+    },
+    "runtime": "piper",
+    "repo": "rhasspy/piper-voices",
+    "license": "MIT",
+    "tags": [
+      "inglês",
+      "voz feminina"
+    ],
+    "description": "Voz feminina em inglês britânico.",
+    "quants": [
+      {
+        "quant": "medium",
+        "file": "en/en_GB/alba/medium/en_GB-alba-medium.onnx"
+      }
+    ],
+    "components": [
+      {
+        "role": "config",
+        "repo": "rhasspy/piper-voices",
+        "file": "en/en_GB/alba/medium/en_GB-alba-medium.onnx.json"
+      }
+    ],
+    "tts": {
+      "language": "en-GB"
     }
   }
 ]

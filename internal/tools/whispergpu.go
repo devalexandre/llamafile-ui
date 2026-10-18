@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 )
 
@@ -42,7 +43,7 @@ func WhisperGPUAssetName() (string, bool) {
 func WhisperGPURelease(ctx context.Context) (Asset, string, error) {
 	name, ok := WhisperGPUAssetName()
 	if !ok {
-		return Asset{}, "", errors.New("não há build do whisper.cpp com GPU para este sistema")
+		return Asset{}, "", errors.New(i18n.T("não há build do whisper.cpp com GPU para este sistema"))
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -50,7 +51,7 @@ func WhisperGPURelease(ctx context.Context) (Asset, string, error) {
 	req.Header.Set("Accept", "application/vnd.github+json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return Asset{}, "", errors.New("não foi possível consultar as releases do app no GitHub")
+		return Asset{}, "", errors.New(i18n.T("não foi possível consultar as releases do app no GitHub"))
 	}
 	defer resp.Body.Close()
 	var data struct {
@@ -61,14 +62,14 @@ func WhisperGPURelease(ctx context.Context) (Asset, string, error) {
 		} `json:"assets"`
 	}
 	if resp.StatusCode != http.StatusOK || json.NewDecoder(resp.Body).Decode(&data) != nil {
-		return Asset{}, "", errors.New("não foi possível consultar as releases do app no GitHub")
+		return Asset{}, "", errors.New(i18n.T("não foi possível consultar as releases do app no GitHub"))
 	}
 	for _, a := range data.Assets {
 		if a.Name == name {
 			return Asset{URL: a.URL, Size: a.Size}, name, nil
 		}
 	}
-	return Asset{}, "", errors.New("a release atual do app ainda não traz o whisper.cpp com GPU; atualize o app")
+	return Asset{}, "", errors.New(i18n.T("a release atual do app ainda não traz o whisper.cpp com GPU; atualize o app"))
 }
 
 func WhisperGPUDir() string { return filepath.Join(paths.BinDir(), string(WhisperGPU)) }

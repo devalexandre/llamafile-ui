@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -14,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/sysproc"
 	"github.com/devalexandre/llamafile-ui/internal/tools"
 )
@@ -55,7 +55,7 @@ func FFmpeg() string {
 func ExtractAudio(ctx context.Context, src, dst string) error {
 	bin := FFmpeg()
 	if bin == "" {
-		return errors.New("instale o ffmpeg para transcrever vídeos")
+		return errors.New(i18n.T("instale o ffmpeg para transcrever vídeos"))
 	}
 	cmd := exec.CommandContext(ctx, bin, "-nostdin", "-v", "error", "-y", "-i", src, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", dst)
 	sysproc.Prepare(cmd)
@@ -63,7 +63,7 @@ func ExtractAudio(ctx context.Context, src, dst string) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		return fmt.Errorf("não foi possível extrair o áudio: %s", strings.TrimSpace(string(out)))
+		return errors.New(i18n.Tf("não foi possível extrair o áudio: %s", strings.TrimSpace(string(out))))
 	}
 	return nil
 }
@@ -91,15 +91,15 @@ var progressRe = regexp.MustCompile(`progress\s*=\s*(\d+)%`)
 func Transcribe(ctx context.Context, audio string, opt Options) (Result, error) {
 	if !Supported(audio) {
 		if IsVideo(audio) {
-			return Result{}, errors.New("para transcrever vídeos, instale o ffmpeg (ex.: sudo pacman -S ffmpeg, sudo apt install ffmpeg, brew install ffmpeg)")
+			return Result{}, errors.New(i18n.T("para transcrever vídeos, instale o ffmpeg (ex.: sudo pacman -S ffmpeg, sudo apt install ffmpeg, brew install ffmpeg)"))
 		}
-		return Result{}, fmt.Errorf("formato não suportado (%s): use WAV, MP3, OGG, FLAC ou um vídeo", filepath.Ext(audio))
+		return Result{}, errors.New(i18n.Tf("formato não suportado (%s): use WAV, MP3, OGG, FLAC ou um vídeo", filepath.Ext(audio)))
 	}
 	if opt.Binary == "" {
-		return Result{}, errors.New("whisperfile não instalado")
+		return Result{}, errors.New(i18n.T("whisperfile não instalado"))
 	}
 	if opt.Model == "" {
-		return Result{}, errors.New("nenhum modelo de voz instalado")
+		return Result{}, errors.New(i18n.T("nenhum modelo de voz instalado"))
 	}
 	lang := opt.Language
 	if lang == "" {
@@ -152,11 +152,11 @@ func Transcribe(ctx context.Context, audio string, opt Options) (Result, error) 
 		if ctx.Err() != nil {
 			return Result{}, ctx.Err()
 		}
-		return Result{}, fmt.Errorf("a transcrição falhou: %s", strings.TrimSpace(strings.Join(tail, " ")))
+		return Result{}, errors.New(i18n.Tf("a transcrição falhou: %s", strings.TrimSpace(strings.Join(tail, " "))))
 	}
 	text, err := os.ReadFile(out + ".txt")
 	if err != nil {
-		return Result{}, errors.New("o motor de voz não gerou a transcrição")
+		return Result{}, errors.New(i18n.T("o motor de voz não gerou a transcrição"))
 	}
 	srt, _ := os.ReadFile(out + ".srt")
 	return Result{Text: cleanText(string(text)), SRT: string(srt)}, nil

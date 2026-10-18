@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/google/uuid"
 )
 
@@ -155,10 +156,10 @@ func (s *Store) emitDoc(d Document) {
 func (s *Store) CreateCollection(name, embedModel string) (Collection, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		name = "Nova coleção"
+		name = i18n.T("Nova coleção")
 	}
 	if embedModel == "" {
-		return Collection{}, errors.New("instale um modelo de embeddings primeiro")
+		return Collection{}, errors.New(i18n.T("instale um modelo de embeddings primeiro"))
 	}
 	t := now()
 	c := Collection{ID: uuid.NewString(), Name: name, EmbedModel: embedModel, CreatedAt: t, UpdatedAt: t}
@@ -285,7 +286,7 @@ func (s *Store) queuedIDs() ([]int64, error) {
 // Unsupported files are skipped and reported in the error.
 func (s *Store) AddFiles(collectionID string, files []string) ([]Document, error) {
 	if _, err := s.Collection(collectionID); err != nil {
-		return nil, errors.New("coleção não encontrada")
+		return nil, errors.New(i18n.T("coleção não encontrada"))
 	}
 	var docs []Document
 	var skipped []string
@@ -308,7 +309,7 @@ func (s *Store) AddFiles(collectionID string, files []string) ([]Document, error
 	_, _ = s.db.Exec(`UPDATE rag_collections SET updated_at = ? WHERE id = ?`, now(), collectionID)
 	s.changed()
 	if len(skipped) > 0 {
-		return docs, fmt.Errorf("formato não suportado: %s", strings.Join(skipped, ", "))
+		return docs, errors.New(i18n.Tf("formato não suportado: %s", strings.Join(skipped, ", ")))
 	}
 	return docs, nil
 }
@@ -373,7 +374,7 @@ func (s *Store) index(ctx context.Context, d *Document) {
 	}
 	chunks := Chunk(text, chunkSize, chunkOverlap)
 	if len(chunks) == 0 {
-		s.setStatus(d, "error", "nenhum texto encontrado no arquivo", 0)
+		s.setStatus(d, "error", i18n.T("nenhum texto encontrado no arquivo"), 0)
 		return
 	}
 	d.Chars = len([]rune(text))
@@ -462,7 +463,7 @@ func (s *Store) vectors(collectionID string) ([]vector, error) {
 func (s *Store) Search(ctx context.Context, collectionID, query string, k int) ([]Hit, error) {
 	c, err := s.Collection(collectionID)
 	if err != nil {
-		return nil, errors.New("coleção não encontrada")
+		return nil, errors.New(i18n.T("coleção não encontrada"))
 	}
 	vecs, err := s.vectors(collectionID)
 	if err != nil {
@@ -494,7 +495,7 @@ func (s *Store) Search(ctx context.Context, collectionID, query string, k int) (
 		all = append(all, scored{v, dot})
 	}
 	if len(all) == 0 && len(vecs) > 0 {
-		return nil, errors.New("a coleção foi indexada com outro modelo — reindexe-a")
+		return nil, errors.New(i18n.T("a coleção foi indexada com outro modelo — reindexe-a"))
 	}
 	sort.Slice(all, func(i, j int) bool { return all[i].score > all[j].score })
 	if len(all) > k {

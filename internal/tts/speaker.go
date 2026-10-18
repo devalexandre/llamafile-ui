@@ -16,6 +16,7 @@ import (
 
 	"github.com/gen2brain/malgo"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/sysproc"
 )
 
@@ -49,10 +50,10 @@ func (s *Speaker) Current() string {
 func (s *Speaker) Speak(id, text string, o Options) error {
 	text = Clean(text)
 	if text == "" {
-		return errors.New("não há texto para ler")
+		return errors.New(i18n.T("não há texto para ler"))
 	}
 	if o.Binary == "" || o.Model == "" {
-		return errors.New("instale o Piper e uma voz para ouvir as respostas")
+		return errors.New(i18n.T("instale o Piper e uma voz para ouvir as respostas"))
 	}
 	if o.Speed <= 0 {
 		o.Speed = 1
@@ -154,7 +155,7 @@ func play(ctx context.Context, text string, o Options) error {
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("não foi possível iniciar o Piper: %w", err)
+		return fmt.Errorf(i18n.T("não foi possível iniciar o Piper: %w"), err)
 	}
 	copied := make(chan error, 1)
 	go func() {
@@ -168,7 +169,7 @@ func play(ctx context.Context, text string, o Options) error {
 	mctx, err := malgo.InitContext(nil, malgo.ContextConfig{}, nil)
 	if err != nil {
 		_ = cmd.Process.Kill()
-		return errors.New("não foi possível acessar o áudio do sistema: " + err.Error())
+		return errors.New(i18n.Tf("não foi possível acessar o áudio do sistema: %s", err))
 	}
 	defer func() {
 		_ = mctx.Uninit()
@@ -183,12 +184,12 @@ func play(ctx context.Context, text string, o Options) error {
 	})
 	if err != nil {
 		_ = cmd.Process.Kill()
-		return errors.New("nenhuma saída de áudio disponível: " + err.Error())
+		return errors.New(i18n.Tf("nenhuma saída de áudio disponível: %s", err))
 	}
 	defer dev.Uninit()
 	if err := dev.Start(); err != nil {
 		_ = cmd.Process.Kill()
-		return errors.New("não foi possível tocar o áudio: " + err.Error())
+		return errors.New(i18n.Tf("não foi possível tocar o áudio: %s", err))
 	}
 
 	tick := time.NewTicker(40 * time.Millisecond)

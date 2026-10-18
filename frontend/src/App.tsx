@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { Button } from "./components/ui";
 import { useApp } from "./lib/store";
+import { t } from "./i18n";
 import { AgentsPage } from "./pages/AgentsPage";
 import { ChatPage } from "./pages/ChatPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
@@ -22,10 +23,10 @@ function MissingRuntimeBanner() {
     <div className="flex items-center gap-3 border-b border-line bg-accent-soft px-5 py-2 text-[12.5px]">
       <Zap className="size-4 text-accent" />
       <span className="flex-1">
-        {downloading ? "Baixando o llamafile…" : "O llamafile ainda não está instalado. Ele é necessário para rodar os modelos."}
+        {downloading ? t("Baixando o llamafile…") : t("O llamafile ainda não está instalado. Ele é necessário para rodar os modelos.")}
       </span>
       <Button size="sm" variant="primary" onClick={() => app.setPage("settings")}>
-        {downloading ? "Ver progresso" : "Instalar agora"}
+        {downloading ? t("Ver progresso") : t("Instalar agora")}
       </Button>
     </div>
   );
@@ -70,8 +71,9 @@ export default function App() {
 
   return (
     <div className="flex h-full">
-      <Sidebar />
-      <main className="flex min-w-0 flex-1 flex-col">
+      <Sidebar key={`sidebar-${app.settings?.language ?? ""}`} />
+      {/* Remount the pages when the language changes so every text is re-translated. */}
+      <main key={`main-${app.settings?.language ?? ""}`} className="flex min-w-0 flex-1 flex-col">
         <MissingRuntimeBanner />
         <div className={clsx("flex min-h-0 flex-1")}>
           {app.page === "chat" && <ChatPage />}
