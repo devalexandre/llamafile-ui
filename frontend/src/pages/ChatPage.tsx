@@ -332,6 +332,40 @@ function MessageRow({
   );
 }
 
+/** Reads every new answer aloud (same as Settings → Leitura em voz alta). */
+function AutoSpeakToggle() {
+  const app = useApp();
+  const on = !!app.settings?.autoSpeak;
+  const ready = !!app.tool("piper")?.installed && app.ttsModels.length > 0;
+  return (
+    <label
+      title={ready ? "Ler cada resposta em voz alta assim que terminar" : "Instale o Piper e uma voz para ouvir as respostas"}
+      className={clsx(
+        "flex h-8 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-[12.5px] select-none",
+        on ? "bg-accent-soft font-medium text-accent" : "text-muted hover:bg-hover hover:text-fg",
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={on}
+        onChange={(e) => {
+          const v = e.target.checked;
+          if (v && !ready) {
+            app.toast("Para ouvir as respostas, instale o Piper e uma voz em Configurações → Leitura em voz alta.");
+            app.setPage("settings");
+            return;
+          }
+          app.saveSettings({ autoSpeak: v });
+          if (!v) api.stopSpeaking();
+        }}
+        className="size-3.5 accent-[var(--accent)]"
+      />
+      <Volume2 className="size-[16px]" />
+      Ler respostas
+    </label>
+  );
+}
+
 function SpeakButton({ id, text, speaking }: { id: string; text: string; speaking: boolean }) {
   const app = useApp();
   return (
@@ -630,6 +664,7 @@ function Composer({
                 {mediaMode === "video" ? "Vídeo" : "Imagem"} <X className="size-3" />
               </button>
             )}
+            <AutoSpeakToggle />
           </div>
           {rec.state === "recording" ? (
             <div className="flex items-center gap-2">
