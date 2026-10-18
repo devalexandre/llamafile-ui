@@ -23,6 +23,7 @@ import {
 import { useState } from "react";
 import { api } from "../lib/api";
 import { groupConversations } from "../lib/format";
+import { t } from "../i18n";
 import { errorText, useApp } from "../lib/store";
 import type { Conversation, Page } from "../lib/types";
 import { Button, IconButton, Menu, Sheet, StatusDot } from "./ui";
@@ -51,7 +52,7 @@ function ConversationItem({ c, onRename }: { c: Conversation; onRename: (c: Conv
   const exportAs = async (format: "md" | "json") => {
     try {
       const path = await api.exportConversation(c.id, format);
-      if (path) app.toast(`Conversa exportada para ${path}`, "success");
+      if (path) app.toast(t("Conversa exportada para {path}", { path }), "success");
     } catch (e) {
       app.toast(errorText(e), "error");
     }
@@ -71,33 +72,33 @@ function ConversationItem({ c, onRename }: { c: Conversation; onRename: (c: Conv
             <button
               onClick={toggle}
               className={clsx("flex size-6 items-center justify-center rounded-md", active ? "hover:bg-black/10" : "hover:bg-active")}
-              title="Mais opções"
+              title={t("Mais opções")}
             >
               <MoreHorizontal className="size-4" />
             </button>
           )}
           items={[
-            { label: "Renomear", icon: <Pencil className="size-3.5" />, onClick: () => onRename(c) },
+            { label: t("Renomear"), icon: <Pencil className="size-3.5" />, onClick: () => onRename(c) },
             {
-              label: c.pinned ? "Desafixar" : "Fixar",
+              label: c.pinned ? t("Desafixar") : t("Fixar"),
               icon: c.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />,
               onClick: () => api.pin(c.id, !c.pinned),
             },
             ...app.projects.map((p) => ({
-              label: `Mover para ${p.icon} ${p.name}`,
+              label: t("Mover para {project}", { project: `${p.icon} ${p.name}` }),
               icon: <FolderKanban className="size-3.5" />,
               onClick: () => api.moveConversation(c.id, p.id).catch((e) => app.toast(errorText(e), "error")),
             })),
             "separator",
-            { label: "Exportar como Markdown", icon: <FileText className="size-3.5" />, onClick: () => exportAs("md") },
-            { label: "Exportar como JSON", icon: <FileJson className="size-3.5" />, onClick: () => exportAs("json") },
+            { label: t("Exportar como Markdown"), icon: <FileText className="size-3.5" />, onClick: () => exportAs("md") },
+            { label: t("Exportar como JSON"), icon: <FileJson className="size-3.5" />, onClick: () => exportAs("json") },
             "separator",
             {
-              label: "Excluir",
+              label: t("Excluir"),
               icon: <Trash2 className="size-3.5" />,
               danger: true,
               onClick: async () => {
-                if (!confirm(`Excluir “${c.title}”? Essa ação não pode ser desfeita.`)) return;
+                if (!confirm(t("Excluir “{title}”? Essa ação não pode ser desfeita.", { title: c.title }))) return;
                 await api.deleteConversation(c.id);
                 if (app.conversationId === c.id) app.newChat();
               },
@@ -121,39 +122,39 @@ export function Sidebar() {
     <aside className="flex h-full w-[260px] shrink-0 flex-col border-r border-line bg-sidebar">
       {/* Title bar area (traffic lights live here on macOS). */}
       <div className={clsx("drag flex shrink-0 items-center justify-end px-3", isMac ? "h-[52px]" : "h-[46px]")}>
-        <IconButton title="Nova conversa (Ctrl+N)" onClick={() => app.newChat()}>
+        <IconButton title={t("Nova conversa (Ctrl+N)")} onClick={() => app.newChat()}>
           <SquarePen className="size-[17px]" />
         </IconButton>
       </div>
 
       <nav className="space-y-0.5 px-2.5">
-        <NavItem page="chat" icon={<MessageSquare className="size-4" />} label="Chat" />
+        <NavItem page="chat" icon={<MessageSquare className="size-4" />} label={t("Chat")} />
         <NavItem
           page="projects"
           icon={<FolderKanban className="size-4" />}
-          label="Projetos"
+          label={t("Projetos")}
           badge={<span className="text-[11px] text-muted">{app.projects.length || ""}</span>}
         />
         <NavItem
           page="agents"
           icon={<Bot className="size-4" />}
-          label="Agentes"
+          label={t("Agentes")}
           badge={<span className="text-[11px] text-muted">{app.agents.length || ""}</span>}
         />
-        <NavItem page="images" icon={<ImagePlus className="size-4" />} label="Imagens" />
-        <NavItem page="voice" icon={<AudioLines className="size-4" />} label="Transcrição" />
+        <NavItem page="images" icon={<ImagePlus className="size-4" />} label={t("Imagens")} />
+        <NavItem page="voice" icon={<AudioLines className="size-4" />} label={t("Transcrição")} />
         <NavItem
           page="documents"
           icon={<BookOpen className="size-4" />}
-          label="Documentos"
+          label={t("Documentos")}
           badge={<span className="text-[11px] text-muted">{app.collections.length || ""}</span>}
         />
         <div className="mx-2.5 my-1.5 h-px bg-line" />
-        <NavItem page="discover" icon={<Compass className="size-4" />} label="Descobrir modelos" />
+        <NavItem page="discover" icon={<Compass className="size-4" />} label={t("Descobrir modelos")} />
         <NavItem
           page="library"
           icon={<HardDrive className="size-4" />}
-          label="Meus modelos"
+          label={t("Meus modelos")}
           badge={
             app.downloads.length > 0 ? (
               <span className="flex items-center gap-1 text-[11px] text-accent">
@@ -165,7 +166,7 @@ export function Sidebar() {
             )
           }
         />
-        <NavItem page="settings" icon={<SettingsIcon className="size-4" />} label="Configurações" />
+        <NavItem page="settings" icon={<SettingsIcon className="size-4" />} label={t("Configurações")} />
       </nav>
 
       <div className="px-2.5 pt-3 pb-1">
@@ -174,7 +175,7 @@ export function Sidebar() {
           <input
             value={app.search}
             onChange={(e) => app.setSearch(e.target.value)}
-            placeholder="Buscar conversas"
+            placeholder={t("Buscar conversas")}
             className="w-full bg-transparent text-[13px] outline-none placeholder:text-faint"
           />
         </div>
@@ -183,7 +184,7 @@ export function Sidebar() {
       <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-3">
         {groups.length === 0 && (
           <p className="px-2 pt-6 text-center text-[12px] text-muted">
-            {app.search ? "Nenhuma conversa encontrada." : "Suas conversas aparecerão aqui."}
+            {app.search ? t("Nenhuma conversa encontrada.") : t("Suas conversas aparecerão aqui.")}
           </p>
         )}
         {groups.map((g) => (
@@ -216,11 +217,11 @@ export function Sidebar() {
             {rt?.state === "running" || rt?.state === "starting" ? rt.modelName : "llamafile"}
           </div>
           <div className="truncate text-[11px] text-muted">
-            {rt?.state === "running" && `Pronto · porta ${rt.port}`}
-            {rt?.state === "starting" && "Carregando modelo…"}
-            {rt?.state === "stopped" && `Parado · v${rt.version}`}
-            {rt?.state === "missing" && "Não instalado — configurar"}
-            {rt?.state === "error" && (rt.message || "Erro")}
+            {rt?.state === "running" && t("Pronto · porta {port}", { port: rt.port })}
+            {rt?.state === "starting" && t("Carregando modelo…")}
+            {rt?.state === "stopped" && t("Parado · v{version}", { version: rt.version })}
+            {rt?.state === "missing" && t("Não instalado — configurar")}
+            {rt?.state === "error" && (rt.message || t("Erro"))}
           </div>
         </div>
       </button>
@@ -234,7 +235,7 @@ export function Sidebar() {
             setRenaming(null);
           }}
         >
-          <div className="mb-3 text-[14px] font-semibold">Renomear conversa</div>
+          <div className="mb-3 text-[14px] font-semibold">{t("Renomear conversa")}</div>
           <input
             autoFocus
             value={title}
@@ -243,10 +244,10 @@ export function Sidebar() {
           />
           <div className="flex justify-end gap-2">
             <Button type="button" onClick={() => setRenaming(null)}>
-              Cancelar
+              {t("Cancelar")}
             </Button>
             <Button type="submit" variant="primary">
-              Renomear
+              {t("Renomear")}
             </Button>
           </div>
         </form>

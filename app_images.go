@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
@@ -35,7 +35,7 @@ type ImageDefaults struct {
 func (a *App) GetImageDefaults(modelID string) (ImageDefaults, error) {
 	m := a.catalog.Find(modelID)
 	if m == nil || m.Image == nil {
-		return ImageDefaults{}, errors.New("modelo de imagem desconhecido")
+		return ImageDefaults{}, errors.New(i18n.T("modelo de imagem desconhecido"))
 	}
 	_, taesd := a.catalog.ComponentPaths(modelID)["taesd"]
 	d := ImageDefaults{Steps: m.Image.Steps, CFG: m.Image.CFG, Width: m.Image.Width, Height: m.Image.Height,
@@ -57,16 +57,16 @@ func (a *App) GenerateImage(req imagegen.Request) (string, error) {
 		list := a.installedFor(category, chosen)
 		if len(list) == 0 {
 			if req.Video {
-				return "", errors.New("baixe um modelo de vídeo em Descobrir → Vídeos")
+				return "", errors.New(i18n.T("baixe um modelo de vídeo em Descobrir → Vídeos"))
 			}
-			return "", errors.New("baixe um modelo de imagem em Descobrir → Imagens")
+			return "", errors.New(i18n.T("baixe um modelo de imagem em Descobrir → Imagens"))
 		}
 		req.ModelID = list[0].ID
 	}
 	if m := a.catalog.Find(req.ModelID); m != nil {
 		req.Video = m.Video != nil // the model decides
 		if req.Video && req.InitImage != "" && !m.Video.ImageInput {
-			return "", fmt.Errorf("%s não usa imagem de referência; escolha o Wan 2.2 5B Turbo para animar uma imagem", m.Name)
+			return "", errors.New(i18n.Tf("%s não usa imagem de referência; escolha o Wan 2.2 5B Turbo para animar uma imagem", m.Name))
 		}
 	}
 	req.InitImage = a.referencePath(req.InitImage)
@@ -108,7 +108,7 @@ func (a *App) SaveImageAs(id int64) (string, error) {
 	if r := []rune(name); len(r) > 40 {
 		name = string(r[:40])
 	}
-	return a.saveAs("Salvar imagem", name+".png", data)
+	return a.saveAs(i18n.T("Salvar imagem"), name+".png", data)
 }
 
 // ImageToAttachment copies a generated image into the chat attachments.
@@ -125,7 +125,7 @@ func (a *App) ImageToAttachment(id int64) (string, error) {
 func (a *App) EnhanceImagePrompt(prompt string) (string, error) {
 	prompt = strings.TrimSpace(prompt)
 	if prompt == "" {
-		return "", errors.New("escreva uma descrição primeiro")
+		return "", errors.New(i18n.T("escreva uma descrição primeiro"))
 	}
 	modelID := a.settings.Get().LastModelID
 	if m := a.catalog.Find(modelID); m == nil || !m.IsChat() || a.catalog.ModelPath(modelID) == "" {
@@ -138,7 +138,7 @@ func (a *App) EnhanceImagePrompt(prompt string) (string, error) {
 		}
 	}
 	if modelID == "" {
-		return "", errors.New("baixe um modelo de chat para melhorar prompts")
+		return "", errors.New(i18n.T("baixe um modelo de chat para melhorar prompts"))
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
@@ -154,7 +154,7 @@ func (a *App) EnhanceImagePrompt(prompt string) (string, error) {
 	}
 	out = strings.Trim(strings.TrimSpace(out), "\"'`")
 	if out == "" {
-		return "", errors.New("o modelo não retornou um prompt")
+		return "", errors.New(i18n.T("o modelo não retornou um prompt"))
 	}
 	return out, nil
 }

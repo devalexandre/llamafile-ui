@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { Button } from "./components/ui";
 import { useApp } from "./lib/store";
+import { t } from "./i18n";
 import { AgentsPage } from "./pages/AgentsPage";
 import { ChatPage } from "./pages/ChatPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
@@ -22,10 +23,10 @@ function MissingRuntimeBanner() {
     <div className="flex items-center gap-3 border-b border-line bg-accent-soft px-5 py-2 text-[12.5px]">
       <Zap className="size-4 text-accent" />
       <span className="flex-1">
-        {downloading ? "Baixando o llamafile…" : "O llamafile ainda não está instalado. Ele é necessário para rodar os modelos."}
+        {downloading ? t("Baixando o llamafile…") : t("O llamafile ainda não está instalado. Ele é necessário para rodar os modelos.")}
       </span>
       <Button size="sm" variant="primary" onClick={() => app.setPage("settings")}>
-        {downloading ? "Ver progresso" : "Instalar agora"}
+        {downloading ? t("Ver progresso") : t("Instalar agora")}
       </Button>
     </div>
   );

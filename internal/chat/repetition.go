@@ -1,12 +1,13 @@
 package chat
 
 import (
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"strings"
 	"unicode"
 )
 
-// RepetitionNote is appended when a looping answer is cut.
-const RepetitionNote = "_(Resposta interrompida: o modelo começou a se repetir. Modelos muito pequenos fazem isso em respostas longas — experimente um modelo maior em Descobrir modelos.)_"
+// RepetitionNote is appended (translated with i18n.T) when a looping answer is cut.
+var RepetitionNote = i18n.N("_(Resposta interrompida: o modelo começou a se repetir. Modelos muito pequenos fazem isso em respostas longas — experimente um modelo maior em Descobrir modelos.)_")
 
 // repetitionCut detects a model stuck in a loop: some paragraph (30+ chars)
 // already appeared twice and shows up a third time. It returns where to cut

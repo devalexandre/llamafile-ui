@@ -14,6 +14,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/ledongthuc/pdf"
 )
 
@@ -53,7 +54,7 @@ func ExtractText(path string) (string, error) {
 		return "", err
 	}
 	if st.Size() > maxFileSize {
-		return "", fmt.Errorf("arquivo maior que %d MB", maxFileSize>>20)
+		return "", errors.New(i18n.Tf("arquivo maior que %d MB", maxFileSize>>20))
 	}
 	switch strings.ToLower(filepath.Ext(path)) {
 	case ".pdf":
@@ -72,7 +73,7 @@ func ExtractText(path string) (string, error) {
 		return "", err
 	}
 	if !utf8.Valid(data) {
-		return "", errors.New("o arquivo não é texto UTF-8")
+		return "", errors.New(i18n.T("o arquivo não é texto UTF-8"))
 	}
 	return string(data), nil
 }
@@ -80,12 +81,12 @@ func ExtractText(path string) (string, error) {
 func extractPDF(path string) (text string, err error) {
 	defer func() {
 		if r := recover(); r != nil { // the pdf library panics on some malformed files
-			err = fmt.Errorf("não foi possível ler o PDF: %v", r)
+			err = errors.New(i18n.Tf("não foi possível ler o PDF: %v", r))
 		}
 	}()
 	f, r, err := pdf.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("não foi possível abrir o PDF: %w", err)
+		return "", fmt.Errorf(i18n.T("não foi possível abrir o PDF: %w"), err)
 	}
 	defer f.Close()
 	var b strings.Builder
@@ -107,7 +108,7 @@ func extractPDF(path string) (text string, err error) {
 		b.WriteString("\n")
 	}
 	if strings.TrimSpace(b.String()) == "" {
-		return "", errors.New("o PDF não tem texto extraível (talvez seja escaneado)")
+		return "", errors.New(i18n.T("o PDF não tem texto extraível (talvez seja escaneado)"))
 	}
 	return b.String(), nil
 }
@@ -133,7 +134,7 @@ func extractDOCX(path string) (string, error) {
 		}
 		return docxText(data), nil
 	}
-	return "", errors.New("documento Word inválido")
+	return "", errors.New(i18n.T("documento Word inválido"))
 }
 
 func docxText(data []byte) string {

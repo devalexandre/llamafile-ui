@@ -6,7 +6,8 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
-	"fmt"
+	"errors"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"io"
 	"os"
 	"path/filepath"
@@ -28,7 +29,7 @@ func Extract(archive, dest string) error {
 func target(dest, name string) (string, error) {
 	p := filepath.Join(dest, filepath.FromSlash(name))
 	if !strings.HasPrefix(p, filepath.Clean(dest)+string(os.PathSeparator)) {
-		return "", fmt.Errorf("caminho inválido no pacote: %s", name)
+		return "", errors.New(i18n.Tf("caminho inválido no pacote: %s", name))
 	}
 	return p, nil
 }
@@ -62,7 +63,7 @@ func extractTarGz(archive, dest string) error {
 		case tar.TypeSymlink:
 			// Shared libraries are symlinked (libfoo.so → libfoo.so.1); keep them relative.
 			if filepath.IsAbs(h.Linkname) || strings.Contains(h.Linkname, "..") {
-				return fmt.Errorf("link inválido no pacote: %s", h.Name)
+				return errors.New(i18n.Tf("link inválido no pacote: %s", h.Name))
 			}
 			_ = os.MkdirAll(filepath.Dir(p), 0o755)
 			err = os.Symlink(h.Linkname, p)
@@ -142,7 +143,7 @@ func zipSymlink(zf *zip.File, p string) error {
 	}
 	target := string(link)
 	if filepath.IsAbs(target) || strings.Contains(target, "..") {
-		return fmt.Errorf("link inválido no pacote: %s", zf.Name)
+		return errors.New(i18n.Tf("link inválido no pacote: %s", zf.Name))
 	}
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return err

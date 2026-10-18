@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/devalexandre/llamafile-ui/internal/bench"
 	"github.com/devalexandre/llamafile-ui/internal/catalog"
 	"github.com/devalexandre/llamafile-ui/internal/chat"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/tools"
 )
@@ -109,10 +109,10 @@ const benchPrompt = "Escreva um texto corrido sobre a história da computação 
 func (a *App) BenchmarkModel(id string) (BenchResult, error) {
 	m, f, fit, ok := a.estimate(id, "chat")
 	if !ok {
-		return BenchResult{}, errors.New("o modelo não está instalado")
+		return BenchResult{}, errors.New(i18n.T("o modelo não está instalado"))
 	}
 	if m.Runtime == catalog.RuntimeWhisper || m.Runtime == catalog.RuntimeDiffusion || catalog.KindOf(m, "") == "embedding" {
-		return BenchResult{}, errors.New("a velocidade deste modelo é medida automaticamente ao usá-lo")
+		return BenchResult{}, errors.New(i18n.T("a velocidade deste modelo é medida automaticamente ao usá-lo"))
 	}
 	a.emit("bench:state", map[string]any{"modelId": id, "phase": "loading"})
 	defer a.emit("bench:state", map[string]any{"modelId": id, "phase": "done"})
@@ -132,7 +132,7 @@ func (a *App) BenchmarkModel(id string) (BenchResult, error) {
 		return BenchResult{}, err
 	}
 	if t.PredictedPerSecond <= 0 {
-		return BenchResult{}, errors.New("o servidor não informou a velocidade")
+		return BenchResult{}, errors.New(i18n.T("o servidor não informou a velocidade"))
 	}
 	a.observe(m, f, "llm", fit.Mode, t.PredictedPerSecond, fit.TPS, t.PromptPerSecond)
 	return BenchResult{ModelID: id, TPS: t.PredictedPerSecond, PromptTPS: t.PromptPerSecond,
@@ -162,7 +162,7 @@ func (a *App) completionTimings(ctx context.Context, tokens int) (timings, error
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return timings{}, fmt.Errorf("servidor: HTTP %d", resp.StatusCode)
+		return timings{}, errors.New(i18n.Tf("servidor: HTTP %d", resp.StatusCode))
 	}
 	var out struct {
 		Timings timings `json:"timings"`

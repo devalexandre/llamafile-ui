@@ -1,6 +1,7 @@
 package tts
 
 import (
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"regexp"
 	"strings"
 )
@@ -30,7 +31,7 @@ var (
 // is synthesized as one utterance.
 func Clean(md string) string {
 	s := thinkRe.ReplaceAllString(md, "")
-	s = fenceRe.ReplaceAllString(s, "\n(trecho de código)\n")
+	s = fenceRe.ReplaceAllLiteralString(s, "\n"+i18n.T("(trecho de código)")+"\n")
 	s = imageRe.ReplaceAllString(s, "")
 	s = linkRe.ReplaceAllString(s, "$1")
 	s = urlRe.ReplaceAllString(s, "")

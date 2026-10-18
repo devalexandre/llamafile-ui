@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { AppProvider } from "./lib/store";
+import { t } from "./i18n";
 
 /** Shows the error instead of a blank window if rendering crashes. */
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -14,12 +15,12 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
     if (!this.state.error) return this.props.children;
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
-        <div className="text-[15px] font-semibold">Algo deu errado na interface</div>
+        <div className="text-[15px] font-semibold">{t("Algo deu errado na interface")}</div>
         <pre className="selectable max-w-xl overflow-auto rounded-lg bg-field p-3 text-left font-mono text-[11.5px] text-muted">
           {this.state.error.message}
         </pre>
         <button className="rounded-[7px] bg-accent px-3.5 py-1.5 text-[13px] font-medium text-on-accent" onClick={() => location.reload()}>
-          Recarregar
+          {t("Recarregar")}
         </button>
       </div>
     );

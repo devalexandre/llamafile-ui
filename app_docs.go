@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/rag"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
 )
@@ -14,7 +15,7 @@ import (
 func (a *App) embedModel() (string, error) {
 	list := a.installedFor("embedding", a.settings.Get().EmbedModelID)
 	if len(list) == 0 {
-		return "", errors.New("baixe um modelo de embeddings em Descobrir → Embeddings")
+		return "", errors.New(i18n.T("baixe um modelo de embeddings em Descobrir → Embeddings"))
 	}
 	return list[0].ID, nil
 }
@@ -45,8 +46,8 @@ func (a *App) ListDocuments(collectionID string) ([]rag.Document, error) {
 
 // AddDocuments opens a file dialog and indexes the chosen files.
 func (a *App) AddDocuments(collectionID string) ([]rag.Document, error) {
-	files, err := a.openFiles("Adicionar documentos",
-		fileFilter{"Documentos", "*" + strings.Join(rag.SupportedExtensions(), ";*")})
+	files, err := a.openFiles(i18n.T("Adicionar documentos"),
+		fileFilter{i18n.T("Documentos"), "*" + strings.Join(rag.SupportedExtensions(), ";*")})
 	if err != nil || len(files) == 0 {
 		return []rag.Document{}, err
 	}

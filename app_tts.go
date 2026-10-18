@@ -7,6 +7,7 @@ import (
 
 	"github.com/devalexandre/llamafile-ui/internal/catalog"
 	"github.com/devalexandre/llamafile-ui/internal/downloads"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
 	"github.com/devalexandre/llamafile-ui/internal/tools"
@@ -25,7 +26,7 @@ func (a *App) piperStatus() ToolStatus {
 func (a *App) downloadPiper() error {
 	asset, ok := tts.ReleaseAsset()
 	if !ok {
-		return errors.New("o Piper não tem versão pronta para este sistema")
+		return errors.New(i18n.T("o Piper não tem versão pronta para este sistema"))
 	}
 	key := tools.DownloadKey(piperTool)
 	dest := filepath.Join(paths.BinDir(), asset.Name)
@@ -43,7 +44,7 @@ func (a *App) ttsVoice(id string) (catalog.View, error) {
 	}
 	list := a.installedFor("tts", id)
 	if len(list) == 0 {
-		return catalog.View{}, errors.New("baixe uma voz em Descobrir → Leitura em voz alta")
+		return catalog.View{}, errors.New(i18n.T("baixe uma voz em Descobrir → Leitura em voz alta"))
 	}
 	return list[0], nil
 }
@@ -51,7 +52,7 @@ func (a *App) ttsVoice(id string) (catalog.View, error) {
 func (a *App) speak(id, text, voiceID string) error {
 	bin := tts.Binary()
 	if bin == "" {
-		return errors.New("instale o Piper em Configurações → Ferramentas para ouvir as respostas")
+		return errors.New(i18n.T("instale o Piper em Configurações → Ferramentas para ouvir as respostas"))
 	}
 	v, err := a.ttsVoice(voiceID)
 	if err != nil {

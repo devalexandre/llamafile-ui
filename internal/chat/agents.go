@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/google/uuid"
 )
 
@@ -96,10 +97,10 @@ FROM agents WHERE id = ?`, id).Scan(&a.ID, &a.Name, &a.Icon, &a.Description, &a.
 func (s *Store) SaveAgent(a Agent) (Agent, error) {
 	a.Name = strings.TrimSpace(a.Name)
 	if a.Name == "" {
-		return a, errors.New("dê um nome ao agente")
+		return a, errors.New(i18n.T("dê um nome ao agente"))
 	}
 	if strings.TrimSpace(a.SystemPrompt) == "" {
-		return a, errors.New("escreva as instruções do agente")
+		return a, errors.New(i18n.T("escreva as instruções do agente"))
 	}
 	if a.Temperature > 2 {
 		a.Temperature = 2
@@ -174,7 +175,7 @@ FROM projects WHERE id = ?`, id).Scan(&p.ID, &p.Name, &p.Icon, &p.Description, &
 func (s *Store) SaveProject(p Project) (Project, error) {
 	p.Name = strings.TrimSpace(p.Name)
 	if p.Name == "" {
-		return p, errors.New("dê um nome ao projeto")
+		return p, errors.New(i18n.T("dê um nome ao projeto"))
 	}
 	t := now()
 	p.UpdatedAt = t

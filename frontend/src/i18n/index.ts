@@ -72,3 +72,12 @@ export function t(msg: string, vars?: Record<string, string | number>): string {
   if (vars) out = out.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
   return out;
 }
+
+/**
+ * Marks a message for translation without translating it, for constants
+ * evaluated at import time: const items = [{ label: msg("Chat") }] and then
+ * t(item.label) when rendering, so a language switch takes effect.
+ */
+export function msg(text: string): string {
+  return text;
+}

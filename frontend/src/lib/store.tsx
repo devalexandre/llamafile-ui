@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { setLanguage, systemLanguage } from "../i18n";
+import { setLanguage, systemLanguage, t } from "../i18n";
 import { api, on } from "./api";
 import type {
   Agent,
@@ -185,9 +185,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       on<RuntimeStatus>("embedder:status", setEmbedder),
       on<Download[] | null>("downloads:progress", (l) => setDownloads(l ?? [])),
       on<{ key: string; error: string }>("downloads:done", ({ key, error }) => {
-        if (error) toast(`Falha no download: ${error}`, "error");
-        else if (toolNames[key]) toast(`${toolNames[key]} instalado e pronto para uso.`, "success");
-        else if (key.startsWith("model:")) toast("Modelo baixado com sucesso.", "success");
+        if (error) toast(t("Falha no download: {error}", { error }), "error");
+        else if (toolNames[key]) toast(t("{tool} instalado e pronto para uso.", { tool: toolNames[key] }), "success");
+        else if (key.startsWith("model:")) toast(t("Modelo baixado com sucesso."), "success");
       }),
       on("tools:changed", loadTools),
       on("catalog:changed", refreshCatalog),

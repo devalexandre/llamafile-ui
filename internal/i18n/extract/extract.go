@@ -17,8 +17,9 @@ import (
 	"strings"
 )
 
-// jsCallRe matches t("…"), t('…') and t(`…`) (template literals without ${}).
-var jsCallRe = regexp.MustCompile("\\bt\\(\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|`(?:[^`\\\\$]|\\\\.)*`)")
+// jsCallRe matches t("…"), t('…'), t(`…`) (template literals without ${})
+// and the msg("…") marker.
+var jsCallRe = regexp.MustCompile("\\b(?:t|msg)\\(\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|`(?:[^`\\\\$]|\\\\.)*`)")
 
 // Keys returns the sorted, unique messages of the project at root.
 func Keys(root string) ([]string, error) {

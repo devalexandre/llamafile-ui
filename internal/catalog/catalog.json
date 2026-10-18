@@ -1751,6 +1751,384 @@
     "fps": 24,
     "image_input": true
    }
+  },
+  {
+   "id": "piper-zh-cn-huayan",
+   "name": "Huayan (中文)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 70
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "chinês",
+    "voz feminina"
+   ],
+   "description": "Voz feminina em mandarim (chinês simplificado).",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "zh_CN-huayan-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/zh/zh_CN/huayan/medium/zh_CN-huayan-medium.onnx",
+     "size": 63201294
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "zh_CN-huayan-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/zh/zh_CN/huayan/medium/zh_CN-huayan-medium.onnx.json",
+     "size": 4822
+    }
+   ],
+   "tts": {
+    "language": "zh-CN"
+   }
+  },
+  {
+   "id": "piper-hi-in-priyamvada",
+   "name": "Priyamvada (हिन्दी)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 70
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "hindi",
+    "voz feminina"
+   ],
+   "description": "Voz feminina em hindi.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "hi_IN-priyamvada-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/priyamvada/medium/hi_IN-priyamvada-medium.onnx",
+     "size": 63516050
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "hi_IN-priyamvada-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/priyamvada/medium/hi_IN-priyamvada-medium.onnx.json",
+     "size": 4973
+    }
+   ],
+   "tts": {
+    "language": "hi-IN"
+   }
+  },
+  {
+   "id": "piper-es-mx-ald",
+   "name": "Ald (es-MX)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 71
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "espanhol",
+    "voz masculina"
+   ],
+   "description": "Voz masculina em espanhol latino-americano.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "es_MX-ald-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_MX/ald/medium/es_MX-ald-medium.onnx",
+     "size": 63201294
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "es_MX-ald-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_MX/ald/medium/es_MX-ald-medium.onnx.json",
+     "size": 4878
+    }
+   ],
+   "tts": {
+    "language": "es-MX"
+   }
+  },
+  {
+   "id": "piper-ar-jo-kareem",
+   "name": "Kareem (العربية)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 68
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "árabe",
+    "voz masculina"
+   ],
+   "description": "Voz masculina em árabe.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "ar_JO-kareem-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/ar/ar_JO/kareem/medium/ar_JO-kareem-medium.onnx",
+     "size": 63201294
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "ar_JO-kareem-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/ar/ar_JO/kareem/medium/ar_JO-kareem-medium.onnx.json",
+     "size": 5024
+    }
+   ],
+   "tts": {
+    "language": "ar-JO"
+   }
+  },
+  {
+   "id": "piper-fr-fr-siwis",
+   "name": "Siwis (Français)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 72
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "francês",
+    "voz feminina"
+   ],
+   "description": "Voz feminina em francês, clara e natural.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "fr_FR-siwis-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx",
+     "size": 63201294
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "fr_FR-siwis-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json",
+     "size": 4875
+    }
+   ],
+   "tts": {
+    "language": "fr-FR"
+   }
+  },
+  {
+   "id": "piper-ru-ru-irina",
+   "name": "Irina (Русский)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 70
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "russo",
+    "voz feminina"
+   ],
+   "description": "Voz feminina em russo.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "ru_RU-irina-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx",
+     "size": 63201294
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "ru_RU-irina-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json",
+     "size": 4765
+    }
+   ],
+   "tts": {
+    "language": "ru-RU"
+   }
+  },
+  {
+   "id": "piper-id-id-news",
+   "name": "News TTS (Indonesia)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 66
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "indonésio",
+    "voz feminina"
+   ],
+   "description": "Voz em indonésio, estilo locução de notícias.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "id_ID-news_tts-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/id/id_ID/news_tts/medium/id_ID-news_tts-medium.onnx",
+     "size": 62950044
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "id_ID-news_tts-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/id/id_ID/news_tts/medium/id_ID-news_tts-medium.onnx.json",
+     "size": 5050
+    }
+   ],
+   "tts": {
+    "language": "id-ID"
+   }
+  },
+  {
+   "id": "piper-de-de-thorsten",
+   "name": "Thorsten (Deutsch)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 74
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "alemão",
+    "voz masculina"
+   ],
+   "description": "Voz masculina em alemão, uma das mais naturais do Piper.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "de_DE-thorsten-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx",
+     "size": 63201294
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "de_DE-thorsten-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx.json",
+     "size": 4819
+    }
+   ],
+   "tts": {
+    "language": "de-DE"
+   }
+  },
+  {
+   "id": "piper-en-gb-alba",
+   "name": "Alba (en-GB)",
+   "publisher": "Piper (Rhasspy)",
+   "params_b": 0.015,
+   "active_params_b": 0.015,
+   "context": 0,
+   "kv_mb_per_1k": 0,
+   "categories": [
+    "tts"
+   ],
+   "quality": {
+    "tts": 72
+   },
+   "runtime": "piper",
+   "repo": "rhasspy/piper-voices",
+   "license": "MIT",
+   "tags": [
+    "inglês",
+    "voz feminina"
+   ],
+   "description": "Voz feminina em inglês britânico.",
+   "files": [
+    {
+     "quant": "medium",
+     "file": "en_GB-alba-medium.onnx",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alba/medium/en_GB-alba-medium.onnx",
+     "size": 63201294
+    }
+   ],
+   "components": [
+    {
+     "role": "config",
+     "file": "en_GB-alba-medium.onnx.json",
+     "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alba/medium/en_GB-alba-medium.onnx.json",
+     "size": 4888
+    }
+   ],
+   "tts": {
+    "language": "en-GB"
+   }
   }
  ],
  "version": 2

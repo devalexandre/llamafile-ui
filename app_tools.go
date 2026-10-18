@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"os"
 
 	"github.com/devalexandre/llamafile-ui/internal/downloads"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/tools"
 )
 
@@ -69,7 +70,7 @@ func (a *App) DownloadTool(name string, thin bool) error {
 	rel := tools.LatestRelease(a.ctx)
 	url, dest, size, ok := tools.Target(rel, t, thin)
 	if !ok {
-		return fmt.Errorf("%s não está disponível na versão %s", name, rel.Version)
+		return errors.New(i18n.Tf("%s não está disponível na versão %s", name, rel.Version))
 	}
 	key := tools.DownloadKey(t)
 	a.mu.Lock()
@@ -77,7 +78,7 @@ func (a *App) DownloadTool(name string, thin bool) error {
 	a.mu.Unlock()
 	label := name + " " + rel.Version
 	if thin {
-		label += " (leve)"
+		label = i18n.Tf("%s %s (leve)", name, rel.Version)
 	}
 	a.emit("tools:changed")
 	return a.downloads.Start(key, label, []downloads.File{{URL: url, Dest: dest, Size: size}})

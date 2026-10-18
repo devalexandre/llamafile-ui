@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/devalexandre/llamafile-ui/internal/chat"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 )
 
@@ -122,12 +123,12 @@ func (a *App) ExportConversation(id, format string) (string, error) {
 	if format == "json" {
 		ext = ".json"
 	}
-	return a.saveAs("Exportar conversa", c.Title+ext, []byte(content))
+	return a.saveAs(i18n.T("Exportar conversa"), c.Title+ext, []byte(content))
 }
 
 // PickImages lets the user attach images; returns attachment names.
 func (a *App) PickImages() ([]string, error) {
-	files, err := a.openFiles("Anexar imagens", fileFilter{"Imagens", "*.png;*.jpg;*.jpeg;*.webp;*.gif"})
+	files, err := a.openFiles(i18n.T("Anexar imagens"), fileFilter{i18n.T("Imagens"), "*.png;*.jpg;*.jpeg;*.webp;*.gif"})
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +200,7 @@ func (a *App) complete(ctx context.Context, modelID, system, user string, maxTok
 		} `json:"choices"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil || len(out.Choices) == 0 {
-		return "", fmt.Errorf("resposta inválida do llamafile")
+		return "", errors.New(i18n.T("resposta inválida do llamafile"))
 	}
 	text := out.Choices[0].Message.Content
 	if i := strings.Index(text, "</think>"); i >= 0 {

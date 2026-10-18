@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/devalexandre/llamafile-ui/internal/hardware"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 )
 
 // Fit describes how well one quant of a model runs on this machine.
@@ -38,6 +39,7 @@ type Fit struct {
 	Measured        bool    `json:"measured"`   // speed comes from runs of this model on this machine
 	Calibrated      bool    `json:"calibrated"` // estimate adjusted by runs of other models
 	Samples         int     `json:"samples"`
+	speed           int     // index in speedNames (language independent)
 }
 
 // Calibration adjusts a speed estimate with what was measured on this machine:
@@ -123,13 +125,13 @@ func levelFor(u float64) string {
 func LevelLabel(level string) string {
 	switch level {
 	case "perfect":
-		return "Roda perfeitamente"
+		return i18n.T("Roda perfeitamente")
 	case "good":
-		return "Roda bem"
+		return i18n.T("Roda bem")
 	case "marginal":
-		return "No limite"
+		return i18n.T("No limite")
 	}
-	return "Não cabe"
+	return i18n.T("Não cabe")
 }
 
 func fitScoreFor(u float64) float64 {
@@ -144,14 +146,25 @@ func fitScoreFor(u float64) float64 {
 	return 100 - (u-0.8)/0.18*50
 }
 
-func label(v float64, thresholds [3]float64, lowerIsFaster bool) string {
-	names := [4]string{"Muito rápido", "Rápido", "Usável", "Lento"}
+var speedNames = [4]string{i18n.N("Muito rápido"), i18n.N("Rápido"), i18n.N("Usável"), i18n.N("Lento")}
+
+// speedSlow is the index of "Lento" in speedNames.
+const speedSlow = 3
+
+// speedLevel returns the index in speedNames for v.
+func speedLevel(v float64, thresholds [3]float64, lowerIsFaster bool) int {
 	for i, t := range thresholds {
 		if (lowerIsFaster && v < t) || (!lowerIsFaster && v >= t) {
-			return names[i]
+			return i
 		}
 	}
-	return names[3]
+	return speedSlow
+}
+
+// setSpeedLevel stores the speed level and its translated label.
+func (f *Fit) setSpeedLevel(i int) {
+	f.speed = i
+	f.SpeedLabel = i18n.T(speedNames[i])
 }
 
 func quality(m *Model, category, quant string) float64 {
@@ -206,7 +219,7 @@ func EvaluateWith(m *Model, f File, category string, hw hardware.Info, contextSi
 
 	w := weightsFor(category)
 	fit.Score = w.quality*fit.QualityScore + w.speed*fit.SpeedScore + w.fit*fit.FitScore + w.context*fit.ContextScore
-	if fit.SpeedLabel == "Lento" && category != "embedding" {
+	if fit.speed == speedSlow && category != "embedding" {
 		// Too slow on this machine (e.g. transcription slower than the audio):
 		// recommend a faster model instead, even if a bit less accurate.
 		fit.Score -= 20
@@ -269,7 +282,7 @@ func evaluateLLM(m *Model, f File, category string, hw hardware.Info, contextSiz
 	w := weightsFor(category)
 	if category == "embedding" {
 		fit.SpeedScore = min(max(100-m.ParamsB*40, 10), 100)
-		fit.SpeedLabel = label(m.ParamsB, [3]float64{0.3, 1, 3}, true)
+		fit.setSpeedLevel(speedLevel(m.ParamsB, [3]float64{0.3, 1, 3}, true))
 		fit.TPS = 0
 	} else {
 		setSpeed(&fit, "llm", category)
@@ -286,19 +299,19 @@ func setSpeed(fit *Fit, kind, category string) {
 	switch kind {
 	case "voice":
 		fit.SpeedScore = 100 * math.Exp(-fit.RealtimeFactor)
-		fit.SpeedLabel = label(fit.RealtimeFactor, [3]float64{0.25, 0.6, 1}, true)
+		fit.setSpeedLevel(speedLevel(fit.RealtimeFactor, [3]float64{0.25, 0.6, 1}, true))
 	case "tts":
 		fit.SpeedScore = 100 * math.Exp(-fit.RealtimeFactor/0.5)
-		fit.SpeedLabel = label(fit.RealtimeFactor, [3]float64{0.2, 0.5, 1}, true)
+		fit.setSpeedLevel(speedLevel(fit.RealtimeFactor, [3]float64{0.2, 0.5, 1}, true))
 	case "video":
 		fit.SpeedScore = 100 * math.Exp(-fit.SecondsPerImage/300)
-		fit.SpeedLabel = label(fit.SecondsPerImage, [3]float64{60, 180, 600}, true)
+		fit.setSpeedLevel(speedLevel(fit.SecondsPerImage, [3]float64{60, 180, 600}, true))
 	case "image":
 		fit.SpeedScore = 100 * math.Exp(-fit.SecondsPerImage/30)
-		fit.SpeedLabel = label(fit.SecondsPerImage, [3]float64{10, 30, 90}, true)
+		fit.setSpeedLevel(speedLevel(fit.SecondsPerImage, [3]float64{10, 30, 90}, true))
 	default:
 		fit.SpeedScore = 100 * (1 - math.Exp(-fit.TPS/weightsFor(category).targetTPS))
-		fit.SpeedLabel = label(fit.TPS, [3]float64{40, 20, 8}, false)
+		fit.setSpeedLevel(speedLevel(fit.TPS, [3]float64{40, 20, 8}, false))
 	}
 }
 

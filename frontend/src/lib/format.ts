@@ -1,3 +1,4 @@
+import { locale, msg, t } from "../i18n";
 import type { Conversation } from "./types";
 
 export function bytes(n: number): string {
@@ -14,9 +15,9 @@ export function gb(n: number): string {
 
 export function duration(seconds: number): string {
   if (seconds < 0 || !isFinite(seconds)) return "—";
-  if (seconds < 60) return `${Math.ceil(seconds)} s`;
-  if (seconds < 3600) return `${Math.ceil(seconds / 60)} min`;
-  return `${(seconds / 3600).toFixed(1)} h`;
+  if (seconds < 60) return t("{n} s", { n: Math.ceil(seconds) });
+  if (seconds < 3600) return t("{n} min", { n: Math.ceil(seconds / 60) });
+  return t("{n} h", { n: (seconds / 3600).toFixed(1) });
 }
 
 export function params(b: number): string {
@@ -31,20 +32,20 @@ export function groupConversations(list: Conversation[]): { label: string; items
   const today = startOfDay(new Date());
   const day = 86_400_000;
   const groups: Record<string, Conversation[]> = {};
-  const order = ["Fixadas", "Hoje", "Ontem", "Últimos 7 dias", "Últimos 30 dias", "Mais antigas"];
+  const order = [msg("Fixadas"), msg("Hoje"), msg("Ontem"), msg("Últimos 7 dias"), msg("Últimos 30 dias"), msg("Mais antigas")];
   for (const c of list) {
     let label: string;
-    if (c.pinned) label = "Fixadas";
-    else if (c.updatedAt >= today) label = "Hoje";
-    else if (c.updatedAt >= today - day) label = "Ontem";
-    else if (c.updatedAt >= today - 7 * day) label = "Últimos 7 dias";
-    else if (c.updatedAt >= today - 30 * day) label = "Últimos 30 dias";
-    else label = "Mais antigas";
+    if (c.pinned) label = order[0];
+    else if (c.updatedAt >= today) label = order[1];
+    else if (c.updatedAt >= today - day) label = order[2];
+    else if (c.updatedAt >= today - 7 * day) label = order[3];
+    else if (c.updatedAt >= today - 30 * day) label = order[4];
+    else label = order[5];
     (groups[label] ??= []).push(c);
   }
-  return order.filter((l) => groups[l]?.length).map((label) => ({ label, items: groups[label] }));
+  return order.filter((l) => groups[l]?.length).map((label) => ({ label: t(label), items: groups[label] }));
 }
 
 export function time(ms: number): string {
-  return new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return new Date(ms).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
 }

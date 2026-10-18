@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"io"
 	"mime"
 	"net/http"
@@ -88,13 +89,13 @@ func (s *Service) SendWith(r SendRequest) (Conversation, error) {
 	conversationID, modelID, collectionID, text, attachments := r.ConversationID, r.ModelID, r.CollectionID, r.Text, r.Attachments
 	text = strings.TrimSpace(text)
 	if text == "" && len(attachments) == 0 {
-		return Conversation{}, errors.New("mensagem vazia")
+		return Conversation{}, errors.New(i18n.T("mensagem vazia"))
 	}
 	if modelID == "" {
-		return Conversation{}, errors.New("escolha um modelo para conversar")
+		return Conversation{}, errors.New(i18n.T("escolha um modelo para conversar"))
 	}
 	if s.IsGenerating(conversationID) {
-		return Conversation{}, errors.New("aguarde a resposta atual terminar")
+		return Conversation{}, errors.New(i18n.T("aguarde a resposta atual terminar"))
 	}
 
 	var conv Conversation
@@ -164,7 +165,7 @@ func (s *Service) Edit(conversationID string, messageID int64, text string) erro
 		}
 	}
 	if original == nil || original.Role != "user" {
-		return errors.New("mensagem não encontrada")
+		return errors.New(i18n.T("mensagem não encontrada"))
 	}
 	if err := s.store.DeleteFrom(conversationID, messageID); err != nil {
 		return err
@@ -222,7 +223,7 @@ func (s *Service) generate(conv Conversation) error {
 
 		s.status(conv.ID, "loading")
 		if err := s.backend.EnsureModel(ctx, conv.ModelID); err != nil {
-			assistant.Error = "Não foi possível carregar o modelo: " + err.Error()
+			assistant.Error = i18n.Tf("Não foi possível carregar o modelo: %s", err.Error())
 			s.finish(assistant)
 			return
 		}
@@ -233,7 +234,7 @@ func (s *Service) generate(conv Conversation) error {
 			sources, err = s.retrieve(ctx, conv)
 			if err != nil {
 				if ctx.Err() == nil {
-					assistant.Error = "Não foi possível buscar nos documentos: " + err.Error()
+					assistant.Error = i18n.Tf("Não foi possível buscar nos documentos: %s", err.Error())
 				}
 				s.finish(assistant)
 				return
@@ -327,14 +328,12 @@ func (s *Service) retrieve(ctx context.Context, conv Conversation) ([]Source, er
 // ragPrompt tells the model how to use the retrieved passages.
 func ragPrompt(sources []Source) string {
 	if len(sources) == 0 {
-		return "\n\nO usuário anexou documentos, mas nenhum trecho relevante foi encontrado para esta pergunta. Diga isso se a resposta depender deles."
+		return "\n\n" + i18n.T("O usuário anexou documentos, mas nenhum trecho relevante foi encontrado para esta pergunta. Diga isso se a resposta depender deles.")
 	}
 	var b strings.Builder
-	b.WriteString("\n\nUse os trechos abaixo, extraídos dos documentos do usuário, para responder. ")
-	b.WriteString("Cite as fontes com o número entre colchetes, por exemplo [1]. ")
-	b.WriteString("Se os trechos não tiverem a resposta, diga que não encontrou nos documentos.\n")
+	b.WriteString("\n\n" + i18n.T("Use os trechos abaixo, extraídos dos documentos do usuário, para responder. Cite as fontes com o número entre colchetes, por exemplo [1]. Se os trechos não tiverem a resposta, diga que não encontrou nos documentos.") + "\n")
 	for _, src := range sources {
-		fmt.Fprintf(&b, "\n[%d] %s (trecho %d):\n%s\n", src.N, src.Document, src.Chunk+1, src.Text)
+		b.WriteString("\n" + i18n.Tf("[%d] %s (trecho %d):", src.N, src.Document, src.Chunk+1) + "\n" + src.Text + "\n")
 	}
 	return b.String()
 }
@@ -453,7 +452,7 @@ func (s *Service) stream(ctx context.Context, conv Conversation, msg *Message, m
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		return fmt.Errorf("falha ao conectar ao llamafile: %w", err)
+		return fmt.Errorf(i18n.T("falha ao conectar ao llamafile: %w"), err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -462,7 +461,7 @@ func (s *Service) stream(ctx context.Context, conv Conversation, msg *Message, m
 		if json.Unmarshal(data, &e) == nil && e.Error != nil {
 			return fmt.Errorf("llamafile: %s", e.Error.Message)
 		}
-		return fmt.Errorf("llamafile respondeu HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
+		return errors.New(i18n.Tf("llamafile respondeu HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(data))))
 	}
 
 	started := time.Now()
@@ -493,7 +492,7 @@ func (s *Service) stream(ctx context.Context, conv Conversation, msg *Message, m
 						if strings.Contains(c.Delta.Content, "\n") && len(msg.Content)-checked > 200 {
 							checked = len(msg.Content)
 							if cut, ok := repetitionCut(msg.Content); ok {
-								msg.Content = strings.TrimRight(msg.Content[:cut], "\n ") + "\n\n" + RepetitionNote
+								msg.Content = strings.TrimRight(msg.Content[:cut], "\n ") + "\n\n" + i18n.T(RepetitionNote)
 								if s.events.Delta != nil {
 									s.events.Delta(conv.ID, msg.ID, msg.Content, msg.Reasoning)
 								}
@@ -532,7 +531,7 @@ func (s *Service) stream(ctx context.Context, conv Conversation, msg *Message, m
 // maybeTitle names a new conversation after its first exchange, like other chat apps.
 func (s *Service) maybeTitle(conversationID string) {
 	conv, err := s.store.Get(conversationID)
-	if err != nil || conv.Title != DefaultTitle {
+	if err != nil || !isDefaultTitle(conv.Title) {
 		return
 	}
 	msgs, err := s.store.Messages(conversationID)
@@ -565,7 +564,7 @@ func fallbackTitle(text string) string {
 		text = strings.TrimSpace(string(r[:48])) + "…"
 	}
 	if text == "" {
-		return DefaultTitle
+		return i18n.T(DefaultTitle)
 	}
 	return text
 }
@@ -584,8 +583,8 @@ func (s *Service) askTitle(question, answer, modelID string) string {
 	body, _ := json.Marshal(map[string]any{
 		"model": modelID,
 		"messages": []apiMessage{
-			{Role: "system", Content: "Crie um título curto (no máximo 6 palavras) para a conversa abaixo, no idioma da pergunta. Responda só com o título, sem aspas nem pontuação final."},
-			{Role: "user", Content: "Pergunta: " + truncate(question, 600) + "\n\nResposta: " + truncate(answer, 600)},
+			{Role: "system", Content: i18n.T("Crie um título curto (no máximo 6 palavras) para a conversa abaixo, no idioma da pergunta. Responda só com o título, sem aspas nem pontuação final.")},
+			{Role: "user", Content: i18n.Tf("Pergunta: %s\n\nResposta: %s", truncate(question, 600), truncate(answer, 600))},
 		},
 		"max_tokens":           24,
 		"temperature":          0.2,
@@ -616,6 +615,7 @@ func (s *Service) askTitle(question, answer, modelID string) string {
 	t = strings.TrimSpace(strings.Split(strings.TrimSpace(t), "\n")[0])
 	t = strings.Trim(t, "\"'*#.` ")
 	t = strings.TrimPrefix(t, "Título: ")
+	t = strings.TrimPrefix(t, i18n.T("Título: "))
 	if t == "" || utf8.RuneCountInString(t) > 60 {
 		return ""
 	}

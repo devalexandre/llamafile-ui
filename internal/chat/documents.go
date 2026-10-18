@@ -2,6 +2,7 @@ package chat
 
 import (
 	"fmt"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"os"
 	"strings"
 	"unicode/utf8"
@@ -47,7 +48,7 @@ func (s *Service) withDocuments(text string, attachments []string, limit int) st
 		}
 		doc := string(data)
 		if utf8.RuneCountInString(doc) > limit {
-			doc = string([]rune(doc)[:max(limit, 0)]) + "\n[… arquivo truncado para caber no contexto]"
+			doc = string([]rune(doc)[:max(limit, 0)]) + "\n" + i18n.T("[… arquivo truncado para caber no contexto]")
 		}
 		limit -= utf8.RuneCountInString(doc)
 		fmt.Fprintf(&b, "\n\n<arquivo nome=%q>\n%s\n</arquivo>", DocumentName(a), strings.TrimSpace(doc))

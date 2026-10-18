@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/devalexandre/llamafile-ui/internal/catalog"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/settings"
 	"github.com/devalexandre/llamafile-ui/internal/voice"
@@ -19,7 +19,7 @@ import (
 func (a *App) voiceModel() (catalog.View, error) {
 	list := a.installedFor("voice", a.settings.Get().VoiceModelID)
 	if len(list) == 0 {
-		return catalog.View{}, errors.New("baixe um modelo de voz (Whisper) em Descobrir → Voz")
+		return catalog.View{}, errors.New(i18n.T("baixe um modelo de voz (Whisper) em Descobrir → Voz"))
 	}
 	return list[0], nil
 }
@@ -34,7 +34,7 @@ func (a *App) SetVoiceLanguage(lang string) error {
 
 func (a *App) StartRecording() error {
 	if bin, _ := a.voiceBinary(); bin == "" {
-		return errors.New("instale o whisperfile para usar voz")
+		return errors.New(i18n.T("instale o whisperfile para usar voz"))
 	}
 	if _, err := a.voiceModel(); err != nil {
 		return err
@@ -61,14 +61,14 @@ func (a *App) transcribe(audio string) (voice.Result, catalog.View, time.Duratio
 	}
 	bin, _ := a.voiceBinary()
 	if bin == "" {
-		return voice.Result{}, m, 0, errors.New("instale o whisperfile para usar voz")
+		return voice.Result{}, m, 0, errors.New(i18n.T("instale o whisperfile para usar voz"))
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	a.mu.Lock()
 	if a.transcribeAbort != nil {
 		a.mu.Unlock()
 		cancel()
-		return voice.Result{}, m, 0, errors.New("já existe uma transcrição em andamento")
+		return voice.Result{}, m, 0, errors.New(i18n.T("já existe uma transcrição em andamento"))
 	}
 	a.transcribeAbort = cancel
 	a.mu.Unlock()
@@ -86,7 +86,7 @@ func (a *App) transcribe(audio string) (voice.Result, catalog.View, time.Duratio
 		OnProgress: func(p int) { a.emit("voice:progress", p) },
 	})
 	if errors.Is(err, context.Canceled) {
-		err = errors.New("transcrição cancelada")
+		err = errors.New(i18n.T("transcrição cancelada"))
 	}
 	took := time.Since(started)
 	if err == nil {
@@ -109,7 +109,7 @@ func (a *App) StopRecording(save bool) (voice.Transcript, error) {
 	if err != nil {
 		return voice.Transcript{}, err
 	}
-	t := voice.Transcript{Name: "Gravação " + time.Now().Format("02/01 15:04"), Source: "recording", ModelID: m.ID,
+	t := voice.Transcript{Name: i18n.Tf("Gravação %s", time.Now().Format("02/01 15:04")), Source: "recording", ModelID: m.ID,
 		Language: a.settings.Get().VoiceLanguage, DurationMs: took.Milliseconds(), Text: res.Text, SRT: res.SRT}
 	if !save {
 		return t, nil
@@ -119,13 +119,13 @@ func (a *App) StopRecording(save bool) (voice.Transcript, error) {
 
 func (a *App) PickAudioFiles() ([]string, error) {
 	if voice.FFmpeg() == "" {
-		return a.openFiles("Escolha arquivos de áudio", fileFilter{"Áudio (WAV, MP3, OGG, FLAC)", "*.wav;*.mp3;*.ogg;*.flac"})
+		return a.openFiles(i18n.T("Escolha arquivos de áudio"), fileFilter{i18n.T("Áudio (WAV, MP3, OGG, FLAC)"), "*.wav;*.mp3;*.ogg;*.flac"})
 	}
 	patterns := []string{"*.wav", "*.mp3", "*.ogg", "*.flac"}
 	for _, e := range voice.VideoExtensions {
 		patterns = append(patterns, "*"+e)
 	}
-	return a.openFiles("Escolha arquivos de áudio ou vídeo", fileFilter{"Áudio e vídeo", strings.Join(patterns, ";")})
+	return a.openFiles(i18n.T("Escolha arquivos de áudio ou vídeo"), fileFilter{i18n.T("Áudio e vídeo"), strings.Join(patterns, ";")})
 }
 
 // TranscribeFile transcribes an audio file and stores the result.
@@ -150,9 +150,9 @@ func (a *App) ExportTranscript(id int64, format string) (string, error) {
 	base := strings.TrimSuffix(t.Name, filepath.Ext(t.Name))
 	if format == "srt" {
 		if t.SRT == "" {
-			return "", fmt.Errorf("esta transcrição não tem legendas")
+			return "", errors.New(i18n.T("esta transcrição não tem legendas"))
 		}
-		return a.saveAs("Exportar legendas", base+".srt", []byte(t.SRT))
+		return a.saveAs(i18n.T("Exportar legendas"), base+".srt", []byte(t.SRT))
 	}
-	return a.saveAs("Exportar transcrição", base+".txt", []byte(t.Text))
+	return a.saveAs(i18n.T("Exportar transcrição"), base+".txt", []byte(t.Text))
 }

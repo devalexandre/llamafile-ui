@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/sysproc"
 )
 
@@ -162,6 +163,13 @@ func detectNvidia(info *Info) bool {
 	return true
 }
 
+// Localized returns a copy of info with the tier name in the current language
+// (Detect stores the Portuguese key so a cached Info follows language changes).
+func (info Info) Localized() Info {
+	info.Tier = i18n.T(info.Tier)
+	return info
+}
+
 func tier(info Info) string {
 	best := max(info.UsableVRAMGB, info.UsableRAMGB*0.5)
 	if info.UnifiedMemory {
@@ -169,13 +177,13 @@ func tier(info Info) string {
 	}
 	switch {
 	case best >= 20:
-		return "Estação de trabalho"
+		return i18n.N("Estação de trabalho")
 	case best >= 10:
-		return "Alto desempenho"
+		return i18n.N("Alto desempenho")
 	case best >= 5:
-		return "Intermediária"
+		return i18n.N("Intermediária")
 	default:
-		return "Básica"
+		return i18n.N("Básica")
 	}
 }
 

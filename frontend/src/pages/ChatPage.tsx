@@ -29,6 +29,7 @@ import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import { Button, EmptyState, Menu } from "../components/ui";
 import { api, attachmentURL, on, onFileDrop } from "../lib/api";
+import { msg, t } from "../i18n";
 import { errorText, useApp } from "../lib/store";
 import type { ChatDraft, ImageProgress, Message, ModelView, Source } from "../lib/types";
 import { clock, useRecorder } from "../lib/useRecorder";
@@ -82,10 +83,10 @@ function Attachments({ names, align, onRemove }: { names: string[]; align?: "end
 }
 
 const suggestions = [
-  "Explique como funciona a quantização de modelos",
-  "Escreva um e-mail curto pedindo uma reunião",
-  "Crie uma função em Go que inverta uma string",
-  "Resuma os prós e contras de rodar IA localmente",
+  msg("Explique como funciona a quantização de modelos"),
+  msg("Escreva um e-mail curto pedindo uma reunião"),
+  msg("Crie uma função em Go que inverta uma string"),
+  msg("Resuma os prós e contras de rodar IA localmente"),
 ];
 
 function ModelPicker({ models, value, onChange }: { models: ModelView[]; value: string; onChange: (id: string) => void }) {
@@ -98,7 +99,7 @@ function ModelPicker({ models, value, onChange }: { models: ModelView[]; value: 
           onClick={toggle}
           className="no-drag flex h-[28px] items-center gap-1.5 rounded-[7px] px-2.5 text-[14px] font-semibold hover:bg-hover"
         >
-          {current ? current.name : "Escolher modelo"}
+          {current ? current.name : t("Escolher modelo")}
           {current?.vision && <ImageIcon className="size-3.5 text-muted" />}
           <ChevronDown className="size-3.5 text-muted" />
         </button>
@@ -121,26 +122,26 @@ function AgentPicker({ value, onChange }: { value: string; onChange: (id: string
       trigger={(toggle) => (
         <button
           onClick={toggle}
-          title="Agente que responde nesta conversa"
+          title={t("Agente que responde nesta conversa")}
           className={clsx(
             "no-drag flex h-[26px] items-center gap-1.5 rounded-full px-2.5 text-[12.5px]",
             current ? "bg-accent-soft font-medium text-accent" : "text-muted hover:bg-hover hover:text-fg",
           )}
         >
           {current ? <span>{current.icon}</span> : <Bot className="size-3.5" />}
-          {current ? current.name : "Agente"}
+          {current ? current.name : t("Agente")}
           <ChevronDown className="size-3" />
         </button>
       )}
       items={[
-        { label: "Assistente padrão", icon: !value ? <Check className="size-3.5" /> : undefined, onClick: () => onChange("") },
+        { label: t("Assistente padrão"), icon: !value ? <Check className="size-3.5" /> : undefined, onClick: () => onChange("") },
         ...app.agents.map((a) => ({
           label: `${a.icon} ${a.name}`,
           icon: a.id === value ? <Check className="size-3.5" /> : undefined,
           onClick: () => onChange(a.id),
         })),
         "separator" as const,
-        { label: "Gerenciar agentes…", icon: <Settings2 className="size-3.5" />, onClick: () => app.setPage("agents") },
+        { label: t("Gerenciar agentes…"), icon: <Settings2 className="size-3.5" />, onClick: () => app.setPage("agents") },
       ]}
     />
   );
@@ -150,7 +151,7 @@ function CopyButton({ text }: { text: string }) {
   const [done, setDone] = useState(false);
   return (
     <button
-      title="Copiar"
+      title={t("Copiar")}
       onClick={() => {
         navigator.clipboard.writeText(text);
         setDone(true);
@@ -177,7 +178,7 @@ function Reasoning({ text, streaming }: { text: string; streaming: boolean }) {
     <div className="mb-2">
       <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-1.5 text-[12px] font-medium text-muted hover:text-fg">
         <Brain className={clsx("size-3.5", streaming && "animate-pulse")} />
-        {streaming ? "Pensando…" : "Raciocínio"}
+        {streaming ? t("Pensando…") : t("Raciocínio")}
         <ChevronDown className={clsx("size-3 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
@@ -229,7 +230,7 @@ function MessageRow({
             />
             <div className="flex justify-end gap-2">
               <Button size="sm" onClick={() => setEditing(false)}>
-                Cancelar
+                {t("Cancelar")}
               </Button>
               <Button
                 size="sm"
@@ -239,7 +240,7 @@ function MessageRow({
                   onEdit(draft);
                 }}
               >
-                Enviar
+                {t("Enviar")}
               </Button>
             </div>
           </div>
@@ -255,7 +256,7 @@ function MessageRow({
             <CopyButton text={m.content} />
             {!busy && (
               <button
-                title="Editar"
+                title={t("Editar")}
                 onClick={() => {
                   setDraft(m.content);
                   setEditing(true);
@@ -277,7 +278,7 @@ function MessageRow({
       {m.reasoning && <Reasoning text={m.reasoning} streaming={streaming && !m.content} />}
       {waiting ? (
         <div className="flex items-center gap-2 py-1 text-[13px] text-muted">
-          <Loader2 className="size-3.5 animate-spin" /> {waitingLabel ?? "Gerando…"}
+          <Loader2 className="size-3.5 animate-spin" /> {waitingLabel ?? t("Gerando…")}
         </div>
       ) : (
         <div
@@ -314,7 +315,7 @@ function MessageRow({
           )}
           {isLast && !busy && m.attachments.length === 0 && (
             <button
-              title="Gerar novamente"
+              title={t("Gerar novamente")}
               onClick={onRegenerate}
               className="flex size-6 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-fg"
             >
@@ -323,7 +324,7 @@ function MessageRow({
           )}
           {m.tps > 0 && (
             <span className="ml-1.5 text-[11px] text-faint">
-              {m.tps.toFixed(1)} tok/s · {m.tokens} tokens
+              {t("{tps} tok/s · {tokens} tokens", { tps: m.tps.toFixed(1), tokens: m.tokens })}
             </span>
           )}
         </div>
@@ -339,7 +340,7 @@ function AutoSpeakToggle() {
   const ready = !!app.tool("piper")?.installed && app.ttsModels.length > 0;
   return (
     <label
-      title={ready ? "Ler cada resposta em voz alta assim que terminar" : "Instale o Piper e uma voz para ouvir as respostas"}
+      title={ready ? t("Ler cada resposta em voz alta assim que terminar") : t("Instale o Piper e uma voz para ouvir as respostas")}
       className={clsx(
         "flex h-8 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-[12.5px] select-none",
         on ? "bg-accent-soft font-medium text-accent" : "text-muted hover:bg-hover hover:text-fg",
@@ -351,7 +352,7 @@ function AutoSpeakToggle() {
         onChange={(e) => {
           const v = e.target.checked;
           if (v && !ready) {
-            app.toast("Para ouvir as respostas, instale o Piper e uma voz em Configurações → Leitura em voz alta.");
+            app.toast(t("Para ouvir as respostas, instale o Piper e uma voz em Configurações → Leitura em voz alta."));
             app.setPage("settings");
             return;
           }
@@ -361,7 +362,7 @@ function AutoSpeakToggle() {
         className="size-3.5 accent-[var(--accent)]"
       />
       <Volume2 className="size-[16px]" />
-      Ler respostas
+      {t("Ler respostas")}
     </label>
   );
 }
@@ -370,7 +371,7 @@ function SpeakButton({ id, text, speaking }: { id: string; text: string; speakin
   const app = useApp();
   return (
     <button
-      title={speaking ? "Parar leitura" : "Ouvir"}
+      title={speaking ? t("Parar leitura") : t("Ouvir")}
       onClick={() => (speaking ? api.stopSpeaking() : api.speak(id, text).catch((e) => app.toast(errorText(e), "error")))}
       className={clsx(
         "flex size-6 items-center justify-center rounded-md hover:bg-hover",
@@ -389,7 +390,7 @@ function Sources({ sources }: { sources: Source[] }) {
   return (
     <div className="mt-2.5">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11.5px] font-medium text-muted">Fontes</span>
+        <span className="text-[11.5px] font-medium text-muted">{t("Fontes")}</span>
         {sources.map((s) => (
           <button
             key={s.n}
@@ -409,7 +410,7 @@ function Sources({ sources }: { sources: Source[] }) {
       {current && (
         <div className="selectable mt-2 rounded-lg border border-line bg-field p-3 text-[12.5px] whitespace-pre-wrap text-fg/85">
           <div className="mb-1 text-[11px] font-semibold text-muted">
-            {current.document} · trecho {current.chunk + 1} · {Math.round(current.score * 100)}% similar
+            {t("{document} · trecho {n} · {score}% similar", { document: current.document, n: current.chunk + 1, score: Math.round(current.score * 100) })}
           </div>
           {current.text}
         </div>
@@ -428,7 +429,7 @@ function CollectionPicker({ value, onChange }: { value: string; onChange: (id: s
       trigger={(toggle) => (
         <button
           onClick={toggle}
-          title="Conversar com documentos"
+          title={t("Conversar com documentos")}
           className={clsx(
             "flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[12.5px]",
             current ? "bg-accent-soft text-accent" : "text-muted hover:bg-hover hover:text-fg",
@@ -439,14 +440,14 @@ function CollectionPicker({ value, onChange }: { value: string; onChange: (id: s
         </button>
       )}
       items={[
-        { label: "Sem documentos", icon: !value ? <Check className="size-3.5" /> : undefined, onClick: () => onChange("") },
+        { label: t("Sem documentos"), icon: !value ? <Check className="size-3.5" /> : undefined, onClick: () => onChange("") },
         ...app.collections.map((c) => ({
           label: `${c.name} (${c.documents})`,
           icon: c.id === value ? <Check className="size-3.5" /> : <BookOpen className="size-3.5" />,
           onClick: () => onChange(c.id),
         })),
         "separator" as const,
-        { label: "Gerenciar documentos…", icon: <Settings2 className="size-3.5" />, onClick: () => app.setPage("documents") },
+        { label: t("Gerenciar documentos…"), icon: <Settings2 className="size-3.5" />, onClick: () => app.setPage("documents") },
       ]}
     />
   );
@@ -494,13 +495,13 @@ function Composer({
     setAdding(true);
     try {
       for (const p of paths.filter(isAudio)) {
-        const t = await api.transcribeForChat(p);
-        if (t) setText((cur) => (cur.trim() ? `${cur.trimEnd()} ${t}` : t));
+        const tr = await api.transcribeForChat(p);
+        if (tr) setText((cur) => (cur.trim() ? `${cur.trimEnd()} ${tr}` : tr));
       }
       const rest = paths.filter((p) => !isAudio(p));
       if (rest.length) {
         const names = await api.attachFiles(rest);
-        if (!vision && names.some((n) => !isDoc(n))) app.toast("O modelo atual não entende imagens — escolha um modelo de Visão para usá-las.");
+        if (!vision && names.some((n) => !isDoc(n))) app.toast(t("O modelo atual não entende imagens — escolha um modelo de Visão para usá-las."));
         setAttachments((a) => [...a, ...names]);
       }
     } catch (e) {
@@ -520,11 +521,11 @@ function Composer({
   }, [draft]);
 
   const dictate = async () => {
-    const t = await rec.stop(false);
-    if (t?.text) {
-      setText((cur) => (cur.trim() ? `${cur.trimEnd()} ${t.text}` : t.text));
+    const tr = await rec.stop(false);
+    if (tr?.text) {
+      setText((cur) => (cur.trim() ? `${cur.trimEnd()} ${tr.text}` : tr.text));
       ref.current?.focus();
-    } else if (t) app.toast("Nenhuma fala detectada.");
+    } else if (tr) app.toast(t("Nenhuma fala detectada."));
   };
 
   useLayoutEffect(() => {
@@ -583,7 +584,7 @@ function Composer({
         )}
         {adding && (
           <div className="flex items-center gap-1.5 px-4 pt-2.5 text-[12px] text-muted">
-            <Loader2 className="size-3.5 animate-spin" /> Preparando arquivos…
+            <Loader2 className="size-3.5 animate-spin" /> {t("Preparando arquivos…")}
           </div>
         )}
         <textarea
@@ -601,16 +602,16 @@ function Composer({
           }}
           placeholder={
             disabled
-              ? "Baixe um modelo para começar a conversar"
+              ? t("Baixe um modelo para começar a conversar")
               : mediaMode === "video"
                 ? attachments.some((a) => !isDoc(a))
-                  ? "Diga como animar a imagem anexada"
-                  : "Descreva o vídeo que você quer (ou anexe uma imagem para animar)"
+                  ? t("Diga como animar a imagem anexada")
+                  : t("Descreva o vídeo que você quer (ou anexe uma imagem para animar)")
                 : imageMode
                 ? attachments.some((a) => !isDoc(a))
-                  ? "Diga como alterar a imagem anexada"
-                  : "Descreva a imagem que você quer (ou anexe uma de referência)"
-                : "Pergunte qualquer coisa"
+                  ? t("Diga como alterar a imagem anexada")
+                  : t("Descreva a imagem que você quer (ou anexe uma de referência)")
+                : t("Pergunte qualquer coisa")
           }
           className="block w-full resize-none bg-transparent px-4 pt-3 pb-1 text-[14px] leading-relaxed outline-none placeholder:text-faint"
         />
@@ -622,7 +623,7 @@ function Composer({
               side="top"
               trigger={(toggle) => (
                 <button
-                  title="Anexar arquivos ou gerar imagem"
+                  title={t("Anexar arquivos ou gerar imagem")}
                   onClick={toggle}
                   disabled={disabled}
                   className="flex size-8 items-center justify-center rounded-full text-muted hover:bg-hover hover:text-fg disabled:opacity-30"
@@ -632,7 +633,7 @@ function Composer({
               )}
               items={[
                 {
-                  label: "Arquivos, imagens ou áudio…",
+                  label: t("Arquivos, imagens ou áudio…"),
                   icon: <Paperclip className="size-3.5" />,
                   onClick: async () => {
                     try {
@@ -643,12 +644,12 @@ function Composer({
                   },
                 },
                 {
-                  label: imageReady ? "Gerar imagem" : "Gerar imagem (baixe um modelo de imagem)",
+                  label: imageReady ? t("Gerar imagem") : t("Gerar imagem (baixe um modelo de imagem)"),
                   icon: <ImagePlus className="size-3.5" />,
                   onClick: () => (imageReady ? (setMediaMode("image"), ref.current?.focus()) : app.setPage("images")),
                 },
                 {
-                  label: videoReady ? "Gerar vídeo" : "Gerar vídeo (baixe um modelo de vídeo)",
+                  label: videoReady ? t("Gerar vídeo") : t("Gerar vídeo (baixe um modelo de vídeo)"),
                   icon: <Film className="size-3.5" />,
                   onClick: () => (videoReady ? (setMediaMode("video"), ref.current?.focus()) : app.setPage("images")),
                 },
@@ -657,11 +658,11 @@ function Composer({
             {imageMode && (
               <button
                 onClick={() => setMediaMode("")}
-                title="Voltar ao chat"
+                title={t("Voltar ao chat")}
                 className="flex h-8 items-center gap-1.5 rounded-full bg-accent-soft px-2.5 text-[12.5px] font-medium text-accent"
               >
                 {mediaMode === "video" ? <Film className="size-[16px]" /> : <ImagePlus className="size-[16px]" />}
-                {mediaMode === "video" ? "Vídeo" : "Imagem"} <X className="size-3" />
+                {mediaMode === "video" ? t("Vídeo") : t("Imagem")} <X className="size-3" />
               </button>
             )}
             <AutoSpeakToggle />
@@ -672,20 +673,20 @@ function Composer({
                 <LevelBars level={rec.level} bars={18} className="h-6" />
               </span>
               <span className="w-9 text-[12px] text-muted tabular-nums">{clock(rec.elapsed)}</span>
-              <button title="Descartar" onClick={rec.cancel} className="flex size-8 items-center justify-center rounded-full text-muted hover:bg-hover">
+              <button title={t("Descartar")} onClick={rec.cancel} className="flex size-8 items-center justify-center rounded-full text-muted hover:bg-hover">
                 <X className="size-4" />
               </button>
-              <button title="Concluir ditado" onClick={dictate} className="flex size-8 items-center justify-center rounded-full bg-bad text-white">
+              <button title={t("Concluir ditado")} onClick={dictate} className="flex size-8 items-center justify-center rounded-full bg-bad text-white">
                 <Check className="size-4" strokeWidth={2.5} />
               </button>
             </div>
           ) : rec.state === "transcribing" ? (
             <span className="flex items-center gap-1.5 pr-1 text-[12px] text-muted">
-              <Loader2 className="size-3.5 animate-spin" /> Transcrevendo… {rec.progress > 0 && `${rec.progress}%`}
+              <Loader2 className="size-3.5 animate-spin" /> {t("Transcrevendo…")} {rec.progress > 0 && `${rec.progress}%`}
             </span>
           ) : busy ? (
             <button
-              title="Parar"
+              title={t("Parar")}
               onClick={onStop}
               className="flex size-8 items-center justify-center rounded-full bg-fg text-bg hover:opacity-85"
             >
@@ -694,7 +695,7 @@ function Composer({
           ) : (
             <div className="flex items-center gap-1">
               <button
-                title={rec.ready ? "Ditar com o microfone" : "Para ditar, instale o whisperfile e um modelo de voz (página Transcrição)"}
+                title={rec.ready ? t("Ditar com o microfone") : t("Para ditar, instale o whisperfile e um modelo de voz (página Transcrição)")}
                 onClick={() => (rec.ready ? rec.start() : app.setPage("voice"))}
                 disabled={disabled}
                 className="flex size-8 items-center justify-center rounded-full text-muted hover:bg-hover hover:text-fg disabled:opacity-30"
@@ -702,7 +703,7 @@ function Composer({
                 <Mic className="size-[18px]" />
               </button>
               <button
-                title="Enviar (Enter)"
+                title={t("Enviar (Enter)")}
                 onClick={submit}
                 disabled={disabled || adding || (!text.trim() && attachments.length === 0)}
                 className="flex size-8 items-center justify-center rounded-full bg-accent text-on-accent transition-opacity disabled:opacity-30"
@@ -714,7 +715,7 @@ function Composer({
         </div>
       </div>
       <p className="mt-2 text-center text-[11px] text-faint">
-        Roda 100% no seu computador. Modelos podem cometer erros — confira informações importantes.
+        {t("Roda 100% no seu computador. Modelos podem cometer erros — confira informações importantes.")}
       </p>
     </div>
   );
@@ -847,7 +848,7 @@ export function ChatPage() {
       }),
       on<ImageProgress>("image:progress", (p) =>
         setImageStep(
-          `${phaseLabel[p.phase] ?? "Gerando a imagem…"}${p.phase === "sampling" && p.steps > 0 ? ` ${p.step}/${p.steps}` : ""}`,
+          `${phaseLabel[p.phase] ? t(phaseLabel[p.phase]) : t("Gerando a imagem…")}${p.phase === "sampling" && p.steps > 0 ? ` ${p.step}/${p.steps}` : ""}`,
         ),
       ),
     ];
@@ -934,7 +935,7 @@ export function ChatPage() {
           <button
             onClick={() => app.openProject(project.id)}
             className="no-drag flex h-[26px] shrink-0 items-center gap-1 rounded-[7px] px-2 text-[12.5px] text-muted hover:bg-hover hover:text-fg"
-            title="Abrir o projeto"
+            title={t("Abrir o projeto")}
           >
             <span>{project.icon}</span>
             <span className="max-w-[140px] truncate">{project.name}</span>
@@ -947,16 +948,16 @@ export function ChatPage() {
         <div className="flex-1" />
         {status === "loading" && (
           <span className="flex items-center gap-1.5 rounded-full bg-warn-soft px-2.5 py-1 text-[11.5px] font-medium text-warn">
-            <Loader2 className="size-3 animate-spin" /> Carregando modelo…
+            <Loader2 className="size-3 animate-spin" /> {t("Carregando modelo…")}
           </span>
         )}
         {status === "searching" && (
           <span className="flex items-center gap-1.5 rounded-full bg-accent-soft px-2.5 py-1 text-[11.5px] font-medium text-accent">
-            <Loader2 className="size-3 animate-spin" /> Buscando nos documentos…
+            <Loader2 className="size-3 animate-spin" /> {t("Buscando nos documentos…")}
           </span>
         )}
         {collection && status !== "searching" && (
-          <span className="flex items-center gap-1 text-[11.5px] text-muted" title="As respostas usam estes documentos">
+          <span className="flex items-center gap-1 text-[11.5px] text-muted" title={t("As respostas usam estes documentos")}>
             <BookOpen className="size-3.5" /> {collection.name}
           </span>
         )}
@@ -974,31 +975,36 @@ export function ChatPage() {
           noModels ? (
             <EmptyState
               icon={<Sparkles className="size-10" />}
-              title="Nenhum modelo instalado"
-              text="Veja quais modelos rodam melhor no seu computador e baixe um para começar a conversar."
+              title={t("Nenhum modelo instalado")}
+              text={t("Veja quais modelos rodam melhor no seu computador e baixe um para começar a conversar.")}
               action={
                 <Button variant="primary" onClick={() => app.setPage("discover")}>
-                  Descobrir modelos
+                  {t("Descobrir modelos")}
                 </Button>
               }
             />
           ) : (
             <div className="mx-auto flex h-full max-w-[680px] flex-col items-center justify-center px-6 pb-10">
               {agent && <div className="mb-2 text-[40px] leading-none">{agent.icon}</div>}
-              <div className="mb-1 text-[26px] font-semibold tracking-tight">{agent ? agent.name : "Como posso ajudar?"}</div>
+              <div className="mb-1 text-[26px] font-semibold tracking-tight">{agent ? agent.name : t("Como posso ajudar?")}</div>
               <div className="mb-7 max-w-[520px] text-center text-[13px] text-muted">
                 {agent?.description ? `${agent.description} · ` : ""}
-                {model ? `Usando ${model.name}` : "Escolha um modelo"}
-                {project ? ` no projeto ${project.name}` : ""} — tudo fica no seu computador.
+                {model
+                  ? project
+                    ? t("Usando {model} no projeto {project} — tudo fica no seu computador.", { model: model.name, project: project.name })
+                    : t("Usando {model} — tudo fica no seu computador.", { model: model.name })
+                  : project
+                    ? t("Escolha um modelo no projeto {project} — tudo fica no seu computador.", { project: project.name })
+                    : t("Escolha um modelo — tudo fica no seu computador.")}
               </div>
               <div className="grid w-full grid-cols-2 gap-2">
                 {suggestions.map((s) => (
                   <button
                     key={s}
-                    onClick={() => send(s, [])}
+                    onClick={() => send(t(s), [])}
                     className="rounded-xl border border-line bg-card px-3.5 py-2.5 text-left text-[13px] text-fg/85 transition-colors hover:bg-hover"
                   >
-                    {s}
+                    {t(s)}
                   </button>
                 ))}
               </div>
@@ -1011,7 +1017,7 @@ export function ChatPage() {
                 key={m.id}
                 m={m}
                 streaming={m.id === streamingId}
-                waitingLabel={status === "image" ? imageStep || "Preparando a imagem…" : undefined}
+                waitingLabel={status === "image" ? imageStep || t("Preparando a imagem…") : undefined}
                 speaking={speakingId === `msg:${m.id}`}
                 isLast={m.id === lastAssistant?.id}
                 busy={busy}

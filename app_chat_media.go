@@ -13,6 +13,7 @@ import (
 
 	"github.com/devalexandre/llamafile-ui/internal/catalog"
 	"github.com/devalexandre/llamafile-ui/internal/chat"
+	"github.com/devalexandre/llamafile-ui/internal/i18n"
 	"github.com/devalexandre/llamafile-ui/internal/imagegen"
 	"github.com/devalexandre/llamafile-ui/internal/paths"
 	"github.com/devalexandre/llamafile-ui/internal/rag"
@@ -34,11 +35,11 @@ func (a *App) PickChatFiles() ([]string, error) {
 		audio = append(audio, "*"+e)
 	}
 	all := append(append([]string{"*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif"}, docs...), audio...)
-	return a.openFiles("Anexar arquivos",
-		fileFilter{"Imagens, documentos e áudio", strings.Join(all, ";")},
-		fileFilter{"Imagens", "*.png;*.jpg;*.jpeg;*.webp;*.gif"},
-		fileFilter{"Documentos (PDF, DOCX, texto, código)", strings.Join(docs, ";")},
-		fileFilter{"Áudio", strings.Join(audio, ";")},
+	return a.openFiles(i18n.T("Anexar arquivos"),
+		fileFilter{i18n.T("Imagens, documentos e áudio"), strings.Join(all, ";")},
+		fileFilter{i18n.T("Imagens"), "*.png;*.jpg;*.jpeg;*.webp;*.gif"},
+		fileFilter{i18n.T("Documentos (PDF, DOCX, texto, código)"), strings.Join(docs, ";")},
+		fileFilter{i18n.T("Áudio"), strings.Join(audio, ";")},
 	)
 }
 
@@ -62,9 +63,9 @@ func (a *App) AttachFiles(paths []string) ([]string, error) {
 			}
 			names = append(names, name)
 		case voice.Supported(p):
-			return names, errors.New("arquivos de áudio são transcritos para o texto da mensagem")
+			return names, errors.New(i18n.T("arquivos de áudio são transcritos para o texto da mensagem"))
 		default:
-			return names, fmt.Errorf("%s: formato não suportado no chat", filepath.Base(p))
+			return names, errors.New(i18n.Tf("%s: formato não suportado no chat", filepath.Base(p)))
 		}
 	}
 	return names, nil
@@ -76,7 +77,7 @@ func attachDocument(path string) (string, error) {
 		return "", err
 	}
 	if strings.TrimSpace(text) == "" {
-		return "", errors.New("nenhum texto encontrado no arquivo")
+		return "", errors.New(i18n.T("nenhum texto encontrado no arquivo"))
 	}
 	base := strings.NewReplacer("/", "_", "\\", "_").Replace(filepath.Base(path))
 	name := uuid.NewString() + "__" + base + chat.DocumentSuffix
@@ -128,10 +129,10 @@ func (a *App) GenerateChatVideo(conversationID, chatModelID, text, reference str
 func (a *App) generateChatMedia(conversationID, chatModelID, text, reference string, video bool) (chat.Conversation, error) {
 	text = strings.TrimSpace(text)
 	if text == "" {
-		return chat.Conversation{}, errors.New("descreva o que você quer gerar")
+		return chat.Conversation{}, errors.New(i18n.T("descreva o que você quer gerar"))
 	}
 	if bin, _ := a.imageBinary(); bin == "" {
-		return chat.Conversation{}, errors.New("instale um motor de imagens em Configurações → Ferramentas para gerar imagens")
+		return chat.Conversation{}, errors.New(i18n.T("instale um motor de imagens em Configurações → Ferramentas para gerar imagens"))
 	}
 	models := a.installedFor("image", a.settings.Get().ImageModelID)
 	if video {
@@ -144,22 +145,22 @@ func (a *App) generateChatMedia(conversationID, chatModelID, text, reference str
 				}
 			}
 			if len(models) > 0 && len(i2v) == 0 {
-				return chat.Conversation{}, errors.New("para animar uma imagem, baixe o Wan 2.2 5B Turbo em Descobrir → Vídeos")
+				return chat.Conversation{}, errors.New(i18n.T("para animar uma imagem, baixe o Wan 2.2 5B Turbo em Descobrir → Vídeos"))
 			}
 			models = i2v
 		}
 	}
 	if len(models) == 0 {
 		if video {
-			return chat.Conversation{}, errors.New("baixe um modelo de vídeo em Descobrir → Vídeos")
+			return chat.Conversation{}, errors.New(i18n.T("baixe um modelo de vídeo em Descobrir → Vídeos"))
 		}
-		return chat.Conversation{}, errors.New("baixe um modelo de imagem em Descobrir → Imagens")
+		return chat.Conversation{}, errors.New(i18n.T("baixe um modelo de imagem em Descobrir → Imagens"))
 	}
 	if a.images.Busy() != "" {
-		return chat.Conversation{}, errors.New("já existe uma imagem sendo gerada")
+		return chat.Conversation{}, errors.New(i18n.T("já existe uma imagem sendo gerada"))
 	}
 	if a.chat.IsGenerating(conversationID) {
-		return chat.Conversation{}, errors.New("aguarde a resposta atual terminar")
+		return chat.Conversation{}, errors.New(i18n.T("aguarde a resposta atual terminar"))
 	}
 	img := models[0]
 	store := a.chat.Store()
@@ -217,7 +218,7 @@ func (a *App) generateChatMedia(conversationID, chatModelID, text, reference str
 		}
 		spec := img.Image
 		if spec == nil {
-			fail(errors.New("modelo de imagem inválido"))
+			fail(errors.New(i18n.T("modelo de imagem inválido")))
 			return
 		}
 		_, taesd := a.catalog.ComponentPaths(img.ID)["taesd"]
@@ -260,13 +261,15 @@ func (a *App) chatImageFinished(jobID string, img *imagegen.Image, errMsg string
 			break
 		}
 		m.Attachments = []string{name}
-		what := "Imagem gerada"
+		took := humanDuration(float64(img.DurationMs) / 1000)
 		if job.video {
-			what = fmt.Sprintf("Vídeo de %.1f s gerado", float64(img.Frames)/float64(max(img.FPS, 1)))
+			m.Content = i18n.Tf("Vídeo de %.1f s gerado com %s em %s.\n\n*Prompt:* %s",
+				float64(img.Frames)/float64(max(img.FPS, 1)), job.model, took, img.Prompt)
+		} else {
+			m.Content = i18n.Tf("Imagem gerada com %s em %s.\n\n*Prompt:* %s", job.model, took, img.Prompt)
 		}
-		m.Content = fmt.Sprintf("%s com %s em %s.\n\n*Prompt:* %s", what, job.model, humanDuration(float64(img.DurationMs)/1000), img.Prompt)
 	case errMsg == "":
-		m.Error = "geração cancelada"
+		m.Error = i18n.T("geração cancelada")
 	default:
 		m.Error = errMsg
 	}
@@ -298,7 +301,7 @@ func (a *App) stopChatImage(conversationID string) bool {
 // humanDuration formats seconds as "45 s" or "3 min 20 s".
 func humanDuration(sec float64) string {
 	if sec < 60 {
-		return fmt.Sprintf("%.0f s", sec)
+		return i18n.Tf("%.0f s", sec)
 	}
-	return fmt.Sprintf("%d min %02d s", int(sec)/60, int(sec)%60)
+	return i18n.Tf("%d min %02d s", int(sec)/60, int(sec)%60)
 }
