@@ -141,6 +141,12 @@ func main() {
 		tray.SetIcon(trayIcon)
 	}
 	tray.SetTooltip("Llamafile UI")
+	if goruntime.GOOS == "linux" {
+		// On Linux Wails ignores the tooltip and names the tray item after its
+		// label (default "Wails"). On macOS the label would show as text next
+		// to the icon, so it is only set here.
+		tray.SetLabel("Llamafile UI")
+	}
 
 	menu := application.NewMenu()
 	menu.Add("Abrir Llamafile UI").OnClick(func(*application.Context) { show() })
